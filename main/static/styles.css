@@ -9,19 +9,11 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-html,
-body {
-    width: 100%;
-    min-height: 100%;
-}
-
 body {
     background-color: #313338;
     color: #dbdee1;
-
     display: flex;
     flex-direction: column;
-
     min-height: 100vh;
 }
 
@@ -32,16 +24,11 @@ body {
 
 .header {
     background-color: #2b2d31;
-
     display: flex;
     justify-content: space-between;
     align-items: center;
-
     padding: 15px 30px;
-
     border-bottom: 1px solid #1e1f22;
-
-    flex: 0 0 auto;
 }
 
 .header-left {
@@ -51,24 +38,18 @@ body {
 }
 
 
-/* =========================================
-   ЛОГОТИП
-   ========================================= */
+/* Логотип */
 
 .logo {
     font-weight: bold;
     font-size: 1.2rem;
-
     color: #f2f3f5;
-
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
 
-/* =========================================
-   НАВИГАЦИЯ
-   ========================================= */
+/* Навигация */
 
 .nav-links {
     display: flex;
@@ -78,11 +59,8 @@ body {
 .nav-links a,
 .account-link {
     color: #b5bac1;
-
     text-decoration: none;
-
     transition: color 0.2s;
-
     font-size: 0.95rem;
 }
 
@@ -103,21 +81,17 @@ body {
 }
 
 
-/* =========================================
-   ИМЯ ПОЛЬЗОВАТЕЛЯ
-   ========================================= */
+/* Приветствие пользователя */
 
 .user-name {
     color: #dbdee1;
-
     font-size: 0.9rem;
-
     margin-right: 8px;
 }
 
 
 /* =========================================
-   КНОПКА ВОЙТИ / ВЫЙТИ
+   КНОПКА "ВОЙТИ" / "ВЫЙТИ"
    ========================================= */
 
 .btn-outline {
@@ -127,11 +101,9 @@ body {
     border: 1px solid #4e5058;
 
     padding: 7px 16px;
-
     border-radius: 6px;
 
     text-decoration: none;
-
     font-size: 0.9rem;
     font-weight: 500;
 
@@ -145,15 +117,13 @@ body {
 
 .btn-outline:hover {
     background-color: #4e5058;
-
     border-color: #686d75;
-
     color: #ffffff;
 }
 
 
 /* =========================================
-   КНОПКА РЕГИСТРАЦИЯ
+   КНОПКА "РЕГИСТРАЦИЯ"
    ========================================= */
 
 .btn-primary {
@@ -161,11 +131,9 @@ body {
     color: #ffffff;
 
     padding: 7px 16px;
-
     border-radius: 6px;
 
     text-decoration: none;
-
     font-size: 0.9rem;
     font-weight: 600;
 
@@ -178,7 +146,6 @@ body {
 
 .btn-primary:hover {
     background-color: #4752c4;
-
     transform: translateY(-1px);
 }
 
@@ -221,17 +188,13 @@ body {
 
 .card h1 {
     font-size: 2rem;
-
     margin-bottom: 15px;
-
     color: #f2f3f5;
 }
 
 .card p {
     font-size: 1.1rem;
-
     color: #b5bac1;
-
     margin-bottom: 25px;
 }
 
@@ -251,7 +214,6 @@ body {
     border-radius: 6px;
 
     text-decoration: none;
-
     font-weight: bold;
 
     transition:
@@ -261,7 +223,6 @@ body {
 
 .btn:hover {
     background-color: #4752c4;
-
     transform: translateY(-1px);
 }
 
@@ -292,9 +253,7 @@ textarea {
 }
 
 
-/* =========================================
-   PLACEHOLDER
-   ========================================= */
+/* Placeholder */
 
 input::placeholder,
 textarea::placeholder {
@@ -302,9 +261,7 @@ textarea::placeholder {
 }
 
 
-/* =========================================
-   ФОКУС НА ПОЛЕ
-   ========================================= */
+/* Фокус на поле */
 
 input[type="text"]:focus,
 input[type="password"]:focus,
@@ -317,7 +274,7 @@ textarea:focus {
 
 
 /* =========================================
-   ПОДВАЛ
+   ПОДВАЛ (FOOTER)
    ========================================= */
 
 .footer {
@@ -336,11 +293,57 @@ textarea:focus {
 
 
 /* =========================================
-   КНОПКИ FORM
+   ДОПОЛНИТЕЛЬНО: КНОПКИ FORM
    ========================================= */
 
 button {
     font-family: inherit;
+}
+
+
+/* =========================================
+   АДАПТИВНОСТЬ ДЛЯ ТЕЛЕФОНА
+   ========================================= */
+
+@media (max-width: 600px) {
+
+    .header {
+        padding: 12px 15px;
+    }
+
+    .header-left {
+        gap: 15px;
+    }
+
+    .nav-links {
+        gap: 10px;
+    }
+
+    .nav-links a {
+        font-size: 0.85rem;
+    }
+
+    .header-right {
+        gap: 6px;
+    }
+
+    .btn-outline,
+    .btn-primary {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .card {
+        padding: 25px 20px;
+    }
+
+    .card h1 {
+        font-size: 1.6rem;
+    }
 }
 
 
@@ -352,14 +355,8 @@ button {
     overflow: hidden;
 }
 
-
-/* =========================================
-   CHAT LAYOUT
-   ========================================= */
-
 .chat-layout {
     flex: 1;
-
     min-height: 0;
 
     display: grid;
@@ -367,7 +364,6 @@ button {
     grid-template-columns: 250px minmax(0, 1fr);
 
     max-width: 1400px;
-
     width: 100%;
 
     margin: 0 auto;
@@ -375,16 +371,7 @@ button {
     padding: 20px;
 
     gap: 14px;
-
-    height: calc(100vh - 67px);
-
-    overflow: hidden;
 }
-
-
-/* =========================================
-   SIDEBAR / CHAT PANEL
-   ========================================= */
 
 .chat-sidebar,
 .chat-panel {
@@ -395,33 +382,19 @@ button {
     border-radius: 8px;
 
     min-height: 0;
-
-    height: 100%;
 }
-
-
-/* =========================================
-   SIDEBAR
-   ========================================= */
 
 .chat-sidebar {
     display: flex;
-
     flex-direction: column;
 
     overflow: hidden;
 }
 
-
-/* =========================================
-   SIDEBAR TITLE
-   ========================================= */
-
 .chat-sidebar-title {
     display: flex;
 
     justify-content: space-between;
-
     align-items: center;
 
     padding: 18px 16px;
@@ -437,11 +410,6 @@ button {
     border-bottom: 1px solid #1e1f22;
 }
 
-
-/* =========================================
-   ONLINE COUNT
-   ========================================= */
-
 .online-count {
     min-width: 24px;
 
@@ -455,11 +423,6 @@ button {
 
     background: #1e1f22;
 }
-
-
-/* =========================================
-   ACTIVE USERS
-   ========================================= */
 
 .active-users {
     padding: 8px;
@@ -487,16 +450,11 @@ button {
     background: #35373c;
 }
 
-
-/* =========================================
-   ONLINE DOT
-   ========================================= */
-
 .online-dot {
     width: 9px;
-    min-width: 9px;
-
     height: 9px;
+
+    min-width: 9px;
 
     border-radius: 50%;
 
@@ -505,19 +463,9 @@ button {
     box-shadow: 0 0 0 2px #2b2d31;
 }
 
-
-/* =========================================
-   CURRENT USER
-   ========================================= */
-
 .current-user {
     font-weight: 700;
 }
-
-
-/* =========================================
-   USER NAME IN SIDEBAR
-   ========================================= */
 
 .active-user-name {
     min-width: 0;
@@ -540,14 +488,7 @@ button {
     flex-direction: column;
 
     overflow: hidden;
-
-    min-width: 0;
 }
-
-
-/* =========================================
-   CHAT HEADER
-   ========================================= */
 
 .chat-header {
     display: flex;
@@ -561,8 +502,6 @@ button {
     padding: 16px 20px;
 
     border-bottom: 1px solid #1e1f22;
-
-    flex: 0 0 auto;
 }
 
 .chat-header h1 {
@@ -579,11 +518,6 @@ button {
     font-size: 0.85rem;
 }
 
-
-/* =========================================
-   CONNECTION STATUS
-   ========================================= */
-
 .connection-status {
     color: #ed4245;
 
@@ -598,7 +532,7 @@ button {
 
 
 /* =========================================
-   CHAT MESSAGES CONTAINER
+   СООБЩЕНИЯ
    ========================================= */
 
 .chat-messages {
@@ -607,7 +541,6 @@ button {
     min-height: 0;
 
     overflow-y: auto;
-
     overflow-x: hidden;
 
     padding: 18px 20px;
@@ -616,12 +549,7 @@ button {
 
     flex-direction: column;
 
-    /*
-       ВАЖНО:
-
-       Все сообщения по умолчанию
-       начинаются слева.
-    */
+    /* Чужие сообщения начинаются слева */
     align-items: flex-start;
 
     overscroll-behavior: contain;
@@ -645,13 +573,15 @@ button {
 
     align-self: flex-start;
 
-    margin: 0 0 13px 0;
+    margin-left: 0;
+    margin-right: 0;
+
+    margin-bottom: 13px;
 }
 
 
 /* =========================================
-   МОЁ СООБЩЕНИЕ
-   ВСЕГДА СПРАВА
+   МОЁ СООБЩЕНИЕ — СПРАВА
    ========================================= */
 
 .chat-message.own-message {
@@ -661,20 +591,18 @@ button {
 
     max-width: min(80%, 760px) !important;
 
-    flex: 0 0 auto;
+    margin-left: auto !important;
+
+    margin-right: 0 !important;
 
     margin-top: 0 !important;
 
     margin-bottom: 13px !important;
-
-    margin-left: auto !important;
-
-    margin-right: 0 !important;
 }
 
 
 /* =========================================
-   MESSAGE META
+   META СООБЩЕНИЯ
    ========================================= */
 
 .message-meta {
@@ -714,15 +642,15 @@ button {
 
 
 /* =========================================
-   TEXT MESSAGE
+   ТЕКСТ СООБЩЕНИЯ
    ========================================= */
 
 .message-text {
     display: inline-block;
 
-    width: fit-content;
-
     max-width: 100%;
+
+    width: fit-content;
 
     padding: 8px 11px;
 
@@ -741,10 +669,10 @@ button {
 
 
 /* =========================================
-   МОЙ ТЕКСТ
+   МОЁ СООБЩЕНИЕ
    ========================================= */
 
-.chat-message.own-message .message-text {
+.own-message .message-text {
     background: #4752c4;
 
     color: #ffffff;
@@ -752,7 +680,7 @@ button {
 
 
 /* =========================================
-   USER PREFIX
+   ПРЕФИКС
    ========================================= */
 
 .user-prefix {
@@ -765,7 +693,7 @@ button {
 
 
 /* =========================================
-   EMPTY CHAT
+   ПУСТОЙ ЧАТ
    ========================================= */
 
 .empty-chat {
@@ -846,11 +774,6 @@ button {
     letter-spacing: 0.3px;
 }
 
-
-/* =========================================
-   ADMIN BADGE В СПИСКЕ ПОЛЬЗОВАТЕЛЕЙ
-   ========================================= */
-
 .user-admin-badge {
     margin-left: auto;
 }
@@ -895,51 +818,39 @@ button {
 
 
 /* =========================================
+   ДОПОЛНИТЕЛЬНАЯ ЗАЩИТА ВЫРАВНИВАНИЯ
+   ========================================= */
+
+/* Чужие сообщения всегда слева */
+
+.chat-messages > .chat-message:not(.own-message) {
+    align-self: flex-start !important;
+
+    margin-left: 0 !important;
+
+    margin-right: 0 !important;
+}
+
+
+/* Мои сообщения всегда справа */
+
+.chat-messages > .chat-message.own-message {
+    align-self: flex-end !important;
+
+    margin-left: auto !important;
+
+    margin-right: 0 !important;
+}
+
+
+/* =========================================
    МОБИЛЬНАЯ ВЕРСИЯ
    ========================================= */
 
 @media (max-width: 700px) {
 
-    .header {
-        padding: 12px 15px;
-    }
-
-    .header-left {
-        gap: 15px;
-    }
-
-    .nav-links {
-        gap: 10px;
-    }
-
-    .nav-links a {
-        font-size: 0.85rem;
-    }
-
-    .header-right {
-        gap: 6px;
-    }
-
-    .btn-outline,
-    .btn-primary {
-        padding: 6px 10px;
-
-        font-size: 0.8rem;
-    }
-
-    .user-name {
-        display: none;
-    }
-
-
-    /* ==============================
-       CHAT
-       ============================== */
-
     .chat-layout {
         grid-template-columns: 1fr;
-
-        height: calc(100vh - 61px);
 
         padding: 10px;
     }
@@ -960,19 +871,12 @@ button {
         flex: 0 0 auto;
     }
 
-
-    /* ==============================
-       MOBILE MESSAGES
-       ============================== */
-
     .chat-message {
         max-width: 92%;
     }
 
     .chat-message.own-message {
         align-self: flex-end !important;
-
-        width: fit-content !important;
 
         max-width: 92% !important;
 
@@ -981,52 +885,7 @@ button {
         margin-right: 0 !important;
     }
 
-
-    /* ==============================
-       DELETE BUTTON
-       ============================== */
-
     .delete-message {
         opacity: 1;
     }
-
-
-    /* ==============================
-       CARD
-       ============================== */
-
-    .card {
-        padding: 25px 20px;
-    }
-
-    .card h1 {
-        font-size: 1.6rem;
-    }
-}
-
-
-/* =========================================
-   ДОПОЛНИТЕЛЬНАЯ ЗАЩИТА ВЫРАВНИВАНИЯ
-   ========================================= */
-
-/*
-   Если JavaScript добавляет сообщения
-   динамически, эти правила всё равно
-   сохраняют правильное положение.
-*/
-
-.chat-messages > .chat-message:not(.own-message) {
-    align-self: flex-start !important;
-
-    margin-left: 0 !important;
-
-    margin-right: 0 !important;
-}
-
-.chat-messages > .chat-message.own-message {
-    align-self: flex-end !important;
-
-    margin-left: auto !important;
-
-    margin-right: 0 !important;
 }
