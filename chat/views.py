@@ -7,7 +7,7 @@ from .models import Message
 @login_required
 def chat_page(request):
     recent_messages = list(
-        Message.objects.select_related("user").order_by("-created_at")[:100]
+        messages = Message.objects.select_related("user").order_by("-timestamp")[:100]
     )
     recent_messages.reverse()
 
