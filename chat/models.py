@@ -25,10 +25,11 @@ class UserProfile(models.Model):
                 self.is_muted = False
                 self.muted_until = None
                 self.save()
+
         return self.is_muted
 
 
 class Message(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField(default="")
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(default=timezone.now)
