@@ -1,9 +1,10 @@
 import json
 import os
+import re
 import shlex
 import time
 from datetime import timedelta
-import re
+
 import redis.asyncio as redis
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -19,6 +20,10 @@ PRESENCE_TTL = 45
 
 class ChatConsumer(AsyncWebsocketConsumer):
 
+    # =========================================================
+    # CONNECT
+    # =========================================================
+
     async def connect(self):
         user = self.scope.get("user")
 
@@ -28,6 +33,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         self.user = user
 
+        # Проверяем бан до подключения
         if await self.is_banned():
             await self.close(code=4003)
             return
@@ -50,7 +56,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.presence_add()
         await self.broadcast_presence()
 
+    # =========================================================
+    # DISCONNECT
+    # =========================================================
+
     async def disconnect(self, close_code):
+
         if hasattr(self, "room_group_name"):
             await self.channel_layer.group_discard(
                 self.room_group_name,
@@ -72,6 +83,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     # =========================================================
 
     async def receive(self, text_data):
+
         try:
             data = json.loads(text_data)
         except json.JSONDecodeError:
@@ -84,12 +96,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # -----------------------------------------------------
 
         if message_type == "heartbeat":
+
             await self.presence_refresh()
 
-            await self.send(text_data=json.dumps({
-                "type": "heartbeat",
-                "status": "ok",
-            }))
+            await self.send(
+                text_data=json.dumps({
+                    "type": "heartbeat",
+                    "status": "ok",
+                })
+            )
 
             return
 
@@ -136,23 +151,37 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not message:
             return
 
-        # Команды
+        # -----------------------------------------------------
+        # COMMANDS
+        # -----------------------------------------------------
+
         if message.startswith("/"):
             await self.handle_command(message)
             return
 
-        # Проверка мута
+        # -----------------------------------------------------
+        # MUTE
+        # -----------------------------------------------------
+
         if await self.check_muted():
+
             await self.send_error(
                 "Ты не можешь писать: у тебя мут."
             )
+
             return
 
-        # Антиспам
+        # -----------------------------------------------------
+        # ANTI-SPAM
+        # -----------------------------------------------------
+
         if not await self.check_antispam(message):
             return
 
-        # Сохраняем сообщение
+        # -----------------------------------------------------
+        # SAVE MESSAGE
+        # -----------------------------------------------------
+
         saved = await self.save_message(message)
 
         await self.channel_layer.group_send(
@@ -170,17 +199,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def handle_command(self, raw_command):
 
         if not await self.is_admin():
+
             await self.send_error(
                 "Команды доступны только администраторам."
             )
+
             return
 
         try:
             parts = shlex.split(raw_command)
         except ValueError:
+
             await self.send_error(
                 "Неверный формат команды."
             )
+
             return
 
         if not parts:
@@ -188,11 +221,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         command = parts[0].lower()
 
-        # -----------------------------------------------------
+        # =====================================================
         # HELP
-        # -----------------------------------------------------
+        # =====================================================
 
         if command == "/help":
+
             await self.send_admin_message(
                 "Команды: "
                 "/mute <username> <минуты> | "
@@ -207,17 +241,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "/users | "
                 "/online"
             )
+
             return
 
-        # -----------------------------------------------------
+        # =====================================================
         # PREFIX
-        # -----------------------------------------------------
+        # =====================================================
 
         if command == "/prefix":
+
             if len(parts) < 4:
+
                 await self.send_admin_message(
-                    'Использование: /prefix <username> <prefix> <color>'
+                    "Использование: "
+                    "/prefix <username> <prefix> <color>"
                 )
+
                 return
 
             username = parts[1]
@@ -225,23 +264,47 @@ class ChatConsumer(AsyncWebsocketConsumer):
             color = parts[3].lower()
 
             if len(prefix) > 50:
+
                 await self.send_admin_message(
                     "Префикс не может быть длиннее 50 символов."
                 )
+
                 return
 
             allowed_colors = {
-                "red", "blue", "green", "yellow", "orange", "purple",
-                "pink", "cyan", "white", "black", "gray", "grey",
-                "gold", "lime", "aqua", "magenta",
+                "red",
+                "blue",
+                "green",
+                "yellow",
+                "orange",
+                "purple",
+                "pink",
+                "cyan",
+                "white",
+                "black",
+                "gray",
+                "grey",
+                "gold",
+                "lime",
+                "aqua",
+                "magenta",
             }
 
-            if color not in allowed_colors and not re.fullmatch(
-                r"#[0-9a-fA-F]{6}", color
-            ):
-                await self.send_admin_message(
-                    "Недопустимый цвет. Например: red, blue или #ff0000."
+            # Можно использовать название цвета
+            # или HEX, например #ff0000
+            if (
+                color not in allowed_colors
+                and not re.fullmatch(
+                    r"#[0-9a-fA-F]{6}",
+                    color,
                 )
+            ):
+
+                await self.send_admin_message(
+                    "Недопустимый цвет. "
+                    "Например: red, blue или #ff0000."
+                )
+
                 return
 
             result = await self.set_prefix(
@@ -251,28 +314,34 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
             if not result:
+
                 await self.send_admin_message(
                     f"Пользователь {username} не найден."
                 )
+
                 return
 
             await self.send_admin_message(
-                f"✓ Префикс {username} изменён: [{prefix}] ({color})"
+                f"✓ Префикс {username} изменён: "
+                f"[{prefix}] ({color})"
             )
 
             await self.broadcast_presence()
+
             return
 
-        # -----------------------------------------------------
-        # REMOVE PREFIX
-        # -----------------------------------------------------
+        # =====================================================
+        # UNPREFIX
+        # =====================================================
 
         if command == "/unprefix":
 
             if len(parts) != 2:
+
                 await self.send_admin_message(
-                    "Использование: /unprefix <username>"
+                    "/unprefix <username>"
                 )
+
                 return
 
             username = parts[1]
@@ -284,9 +353,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
             if not result:
+
                 await self.send_admin_message(
                     f"Пользователь {username} не найден."
                 )
+
                 return
 
             await self.send_admin_message(
@@ -297,16 +368,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------------------
+        # =====================================================
         # MUTE
-        # -----------------------------------------------------
+        # =====================================================
 
         if command == "/mute":
 
             if len(parts) != 3:
+
                 await self.send_admin_message(
                     "/mute <username> <минуты>"
                 )
+
                 return
 
             username = parts[1]
@@ -314,15 +387,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             try:
                 minutes = int(parts[2])
             except ValueError:
+
                 await self.send_admin_message(
                     "Количество минут должно быть числом."
                 )
+
                 return
 
             if minutes <= 0:
+
                 await self.send_admin_message(
                     "Минуты должны быть больше 0."
                 )
+
                 return
 
             result = await self.mute_user(
@@ -331,9 +408,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
             if not result:
+
                 await self.send_admin_message(
                     f"Пользователь {username} не найден."
                 )
+
                 return
 
             await self.send_admin_message(
@@ -351,16 +430,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------------------
+        # =====================================================
         # UNMUTE
-        # -----------------------------------------------------
+        # =====================================================
 
         if command == "/unmute":
 
             if len(parts) != 2:
+
                 await self.send_admin_message(
                     "/unmute <username>"
                 )
+
                 return
 
             username = parts[1]
@@ -368,9 +449,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             result = await self.unmute_user(username)
 
             if not result:
+
                 await self.send_admin_message(
                     f"Пользователь {username} не найден."
                 )
+
                 return
 
             await self.send_admin_message(
@@ -379,16 +462,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------------------
+        # =====================================================
         # BAN
-        # -----------------------------------------------------
+        # =====================================================
 
         if command == "/ban":
 
             if len(parts) != 2:
+
                 await self.send_admin_message(
                     "/ban <username>"
                 )
+
                 return
 
             username = parts[1]
@@ -396,9 +481,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             result = await self.ban_user(username)
 
             if not result:
+
                 await self.send_admin_message(
                     f"Пользователь {username} не найден."
                 )
+
                 return
 
             await self.send_admin_message(
@@ -417,16 +504,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------------------
+        # =====================================================
         # UNBAN
-        # -----------------------------------------------------
+        # =====================================================
 
         if command == "/unban":
 
             if len(parts) != 2:
+
                 await self.send_admin_message(
                     "/unban <username>"
                 )
+
                 return
 
             username = parts[1]
@@ -434,9 +523,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             result = await self.unban_user(username)
 
             if not result:
+
                 await self.send_admin_message(
                     f"Пользователь {username} не найден."
                 )
+
                 return
 
             await self.send_admin_message(
@@ -445,16 +536,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------------------
+        # =====================================================
         # KICK
-        # -----------------------------------------------------
+        # =====================================================
 
         if command == "/kick":
 
             if len(parts) != 2:
+
                 await self.send_admin_message(
                     "/kick <username>"
                 )
+
                 return
 
             username = parts[1]
@@ -462,16 +555,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
             result = await self.find_user(username)
 
             if not result:
+
                 await self.send_admin_message(
                     f"Пользователь {username} не найден."
                 )
+
                 return
 
             await self.channel_layer.group_send(
                 f"user_{result['id']}",
                 {
                     "type": "force_disconnect",
-                    "reason": "Ты был исключён администратором.",
+                    "reason": (
+                        "Ты был исключён администратором."
+                    ),
                 },
             )
 
@@ -481,24 +578,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------------------
+        # =====================================================
         # DELETE
-        # -----------------------------------------------------
+        # =====================================================
 
         if command == "/delete":
 
             if len(parts) != 2:
+
                 await self.send_admin_message(
                     "/delete <id>"
                 )
+
                 return
 
             try:
                 message_id = int(parts[1])
             except ValueError:
+
                 await self.send_admin_message(
                     "ID сообщения должен быть числом."
                 )
+
                 return
 
             deleted = await self.delete_message(
@@ -506,9 +607,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
             if not deleted:
+
                 await self.send_admin_message(
                     f"Сообщение #{message_id} не найдено."
                 )
+
                 return
 
             await self.channel_layer.group_send(
@@ -521,9 +624,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------------------
+        # =====================================================
         # CLEAR
-        # -----------------------------------------------------
+        # =====================================================
 
         if command == "/clear":
 
@@ -542,38 +645,43 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             return
 
-        # -----------------------------------------------------
+        # =====================================================
         # USERS
-        # -----------------------------------------------------
+        # =====================================================
 
         if command == "/users":
 
             users = await self.get_users()
 
             if not users:
+
                 await self.send_admin_message(
                     "Пользователей нет."
                 )
+
                 return
 
             await self.send_admin_message(
-                "Пользователи: " + ", ".join(users)
+                "Пользователи: " +
+                ", ".join(users)
             )
 
             return
 
-        # -----------------------------------------------------
+        # =====================================================
         # ONLINE
-        # -----------------------------------------------------
+        # =====================================================
 
         if command == "/online":
 
             users = await self.get_online_users()
 
             if not users:
+
                 await self.send_admin_message(
                     "Сейчас никто не онлайн."
                 )
+
                 return
 
             await self.send_admin_message(
@@ -586,6 +694,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             return
 
+        # =====================================================
+        # UNKNOWN COMMAND
+        # =====================================================
+
         await self.send_admin_message(
             f"Неизвестная команда: {command}. "
             "Напиши /help"
@@ -597,66 +709,82 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def chat_message(self, event):
 
-        await self.send(text_data=json.dumps({
-            "type": "message",
-            "id": event["id"],
-            "username": event["username"],
-            "prefix": event.get("prefix", ""),
-            "prefix_color": event.get("prefix_color", ""),
-            "text": event["text"],
-            "created_at": event["created_at"],
-            "is_me": (
-                event["username"] ==
-                self.user.username
-            ),
-            "is_admin": event["is_admin"],
-        }))
+        await self.send(
+            text_data=json.dumps({
+                "type": "message",
+                "id": event["id"],
+                "username": event["username"],
+                "prefix": event.get("prefix", ""),
+                "prefix_color": event.get(
+                    "prefix_color",
+                    "",
+                ),
+                "text": event["text"],
+                "created_at": event["created_at"],
+                "is_me": (
+                    event["username"]
+                    == self.user.username
+                ),
+                "is_admin": event["is_admin"],
+            })
+        )
 
     async def message_deleted(self, event):
 
-        await self.send(text_data=json.dumps({
-            "type": "message_deleted",
-            "id": event["id"],
-        }))
+        await self.send(
+            text_data=json.dumps({
+                "type": "message_deleted",
+                "id": event["id"],
+            })
+        )
 
     async def chat_cleared(self, event):
 
-        await self.send(text_data=json.dumps({
-            "type": "chat_cleared",
-        }))
+        await self.send(
+            text_data=json.dumps({
+                "type": "chat_cleared",
+            })
+        )
 
     async def moderation(self, event):
 
-        await self.send(text_data=json.dumps({
-            "type": "moderation",
-            "action": event["action"],
-            "minutes": event.get("minutes"),
-        }))
+        await self.send(
+            text_data=json.dumps({
+                "type": "moderation",
+                "action": event["action"],
+                "minutes": event.get("minutes"),
+            })
+        )
 
     async def force_disconnect(self, event):
 
-        await self.send(text_data=json.dumps({
-            "type": "force_disconnect",
-            "reason": event.get(
-                "reason",
-                "Соединение закрыто.",
-            ),
-        }))
+        await self.send(
+            text_data=json.dumps({
+                "type": "force_disconnect",
+                "reason": event.get(
+                    "reason",
+                    "Соединение закрыто.",
+                ),
+            })
+        )
 
         await self.close(code=4003)
 
     async def presence_update(self, event):
 
-        await self.send(text_data=json.dumps({
-            "type": "presence",
-            "users": event["users"],
-        }))
+        await self.send(
+            text_data=json.dumps({
+                "type": "presence",
+                "users": event["users"],
+            })
+        )
 
     # =========================================================
-    # REDIS PRESENCE
+    # REDIS
     # =========================================================
 
     def redis_client(self):
+
         url = os.environ.get("REDIS_URL")
 
         if not url:
@@ -667,6 +795,132 @@ class ChatConsumer(AsyncWebsocketConsumer):
             decode_responses=True,
         )
 
+    # =========================================================
+    # ANTI-SPAM
+    # =========================================================
+
+    async def check_antispam(self, message):
+        """
+        Антиспам:
+
+        1. Минимум 1 секунда между сообщениями.
+        2. Максимум 5 сообщений за 10 секунд.
+        3. Одинаковое сообщение подряд запрещено.
+        """
+
+        client = self.redis_client()
+
+        # Если Redis недоступен,
+        # не ломаем чат.
+        if client is None:
+            return True
+
+        user_id = str(self.user.id)
+
+        cooldown_key = (
+            f"nptv25:spam:cooldown:{user_id}"
+        )
+
+        count_key = (
+            f"nptv25:spam:count:{user_id}"
+        )
+
+        last_key = (
+            f"nptv25:spam:last:{user_id}"
+        )
+
+        try:
+
+            # -------------------------------------------------
+            # Слишком быстро
+            # -------------------------------------------------
+
+            if await client.exists(
+                cooldown_key
+            ):
+
+                await self.send_error(
+                    "⏱️ Подожди 1 секунду "
+                    "перед следующим сообщением."
+                )
+
+                return False
+
+            # -------------------------------------------------
+            # Одинаковое сообщение
+            # -------------------------------------------------
+
+            last_message = await client.get(
+                last_key
+            )
+
+            if last_message == message:
+
+                await self.send_error(
+                    "🔁 Нельзя отправлять "
+                    "одинаковые сообщения подряд."
+                )
+
+                return False
+
+            # -------------------------------------------------
+            # Счётчик за 10 секунд
+            # -------------------------------------------------
+
+            count = await client.incr(
+                count_key
+            )
+
+            if count == 1:
+
+                await client.expire(
+                    count_key,
+                    10,
+                )
+
+            # -------------------------------------------------
+            # Лимит
+            # -------------------------------------------------
+
+            if count > 5:
+
+                await self.send_error(
+                    "🚫 Антиспам: максимум "
+                    "5 сообщений за 10 секунд."
+                )
+
+                return False
+
+            # -------------------------------------------------
+            # Запоминаем сообщение
+            # -------------------------------------------------
+
+            await client.set(
+                last_key,
+                message,
+                ex=10,
+            )
+
+            # -------------------------------------------------
+            # Задержка
+            # -------------------------------------------------
+
+            await client.set(
+                cooldown_key,
+                "1",
+                ex=1,
+            )
+
+            return True
+
+        finally:
+
+            await client.aclose()
+
+    # =========================================================
+    # PRESENCE
+    # =========================================================
+
     async def presence_add(self):
 
         client = self.redis_client()
@@ -675,6 +929,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         try:
+
             now = int(time.time())
 
             await client.zadd(
@@ -694,6 +949,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
         finally:
+
             await client.aclose()
 
     async def presence_refresh(self):
@@ -704,13 +960,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         try:
+
             await client.zadd(
                 PRESENCE_KEY,
                 {
-                    self.channel_name: int(time.time()),
+                    self.channel_name:
+                    int(time.time()),
                 },
             )
+
         finally:
+
             await client.aclose()
 
     async def presence_remove(self):
@@ -721,6 +981,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         try:
+
             await client.zrem(
                 PRESENCE_KEY,
                 self.channel_name,
@@ -732,6 +993,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
         finally:
+
             await client.aclose()
 
     async def get_online_users(self):
@@ -742,9 +1004,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return []
 
         try:
+
             now = int(time.time())
 
-            # Удаляем зависшие соединения.
+            # Удаляем старые соединения
             await client.zremrangebyscore(
                 PRESENCE_KEY,
                 0,
@@ -790,17 +1053,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 result.append({
                     "username": user["username"],
                     "prefix": profile["prefix"],
-                    "prefix_color": profile["prefix_color"],
+                    "prefix_color": profile[
+                        "prefix_color"
+                    ],
                     "is_admin": profile["is_admin"],
                 })
 
             result.sort(
-                key=lambda x: x["username"].lower()
+                key=lambda x:
+                x["username"].lower()
             )
 
             return result
 
         finally:
+
             await client.aclose()
 
     async def broadcast_presence(self):
@@ -815,56 +1082,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             },
         )
 
-    async def check_antispam(self, message):
-        """
-        Redis anti-spam:
-        - minimum 0.8 sec between messages
-        - max 5 messages per 10 sec
-        - blocks exact duplicate messages for 10 sec
-        """
-        client = self.redis_client()
-
-        if client is None:
-            return True
-
-        user_id = self.user.id
-        cooldown_key = f"nptv25:spam:cooldown:{user_id}"
-        count_key = f"nptv25:spam:count:{user_id}"
-        last_key = f"nptv25:spam:last:{user_id}"
-
-        try:
-            if await client.exists(cooldown_key):
-                await self.send_error(
-                    "Не так быстро. Подожди немного."
-                )
-                return False
-
-            count = await client.incr(count_key)
-
-            if count == 1:
-                await client.expire(count_key, 10)
-
-            if count > 5:
-                await self.send_error(
-                    "Антиспам: максимум 5 сообщений за 10 секунд."
-                )
-                return False
-
-            last_message = await client.get(last_key)
-
-            if last_message == message:
-                await self.send_error(
-                    "Не отправляй одно и то же сообщение подряд."
-                )
-                return False
-
-            await client.set(last_key, message, ex=10)
-            await client.set(cooldown_key, "1", ex=1)
-
-            return True
-        finally:
-            await client.aclose()
-
     # =========================================================
     # DATABASE
     # =========================================================
@@ -873,16 +1090,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def is_admin(self):
 
         return bool(
-            self.user.is_staff or
-            self.user.is_superuser
+            self.user.is_staff
+            or self.user.is_superuser
         )
 
     @sync_to_async
     def is_banned(self):
+
         profile, _ = UserProfile.objects.get_or_create(
             user=self.user
         )
-        return bool(profile.is_banned)
+
+        return bool(
+            profile.is_banned
+        )
 
     @sync_to_async
     def save_message(self, text):
@@ -900,14 +1121,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "id": message.id,
             "username": self.user.username,
             "prefix": profile.prefix or "",
-            "prefix_color": getattr(profile, "prefix_color", "") or "",
+            "prefix_color": getattr(
+                profile,
+                "prefix_color",
+                "",
+            ) or "",
             "text": message.content,
             "created_at": timezone.localtime(
                 message.timestamp
             ).strftime("%H:%M"),
             "is_admin": bool(
-                self.user.is_staff or
-                self.user.is_superuser
+                self.user.is_staff
+                or self.user.is_superuser
             ),
         }
 
@@ -924,10 +1149,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         return {
             "prefix": profile.prefix or "",
-            "prefix_color": getattr(profile, "prefix_color", "") or "",
+            "prefix_color": getattr(
+                profile,
+                "prefix_color",
+                "",
+            ) or "",
             "is_admin": bool(
-                user.is_staff or
-                user.is_superuser
+                user.is_staff
+                or user.is_superuser
             ),
         }
 
@@ -958,6 +1187,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def find_user(self, username):
 
         try:
+
             user = User.objects.get(
                 username__iexact=username
             )
@@ -968,15 +1198,29 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }
 
         except User.DoesNotExist:
+
             return None
 
+    # =========================================================
+    # PREFIX
+    # =========================================================
+
     @sync_to_async
-    def set_prefix(self, username, prefix, color=""):
+    def set_prefix(
+        self,
+        username,
+        prefix,
+        color="",
+    ):
+
         try:
+
             user = User.objects.get(
                 username__iexact=username
             )
+
         except User.DoesNotExist:
+
             return None
 
         profile, _ = UserProfile.objects.get_or_create(
@@ -984,14 +1228,29 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
         profile.prefix = prefix
-        if hasattr(profile, "prefix_color"):
+
+        # Поддержка prefix_color
+        if hasattr(
+            profile,
+            "prefix_color",
+        ):
+
             profile.prefix_color = color
 
-        update_fields = ["prefix"]
-        if hasattr(profile, "prefix_color"):
-            update_fields.append("prefix_color")
+            profile.save(
+                update_fields=[
+                    "prefix",
+                    "prefix_color",
+                ]
+            )
 
-        profile.save(update_fields=update_fields)
+        else:
+
+            profile.save(
+                update_fields=[
+                    "prefix",
+                ]
+            )
 
         return {
             "id": user.id,
@@ -1000,14 +1259,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "prefix_color": color,
         }
 
+    # =========================================================
+    # MUTE
+    # =========================================================
+
     @sync_to_async
-    def mute_user(self, username, minutes):
+    def mute_user(
+        self,
+        username,
+        minutes,
+    ):
 
         try:
+
             user = User.objects.get(
                 username__iexact=username
             )
+
         except User.DoesNotExist:
+
             return None
 
         profile, _ = UserProfile.objects.get_or_create(
@@ -1015,9 +1285,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
         profile.is_muted = True
+
         profile.muted_until = (
-            timezone.now() +
-            timedelta(minutes=minutes)
+            timezone.now()
+            + timedelta(minutes=minutes)
         )
 
         profile.save(
@@ -1032,14 +1303,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "username": user.username,
         }
 
+    # =========================================================
+    # UNMUTE
+    # =========================================================
+
     @sync_to_async
     def unmute_user(self, username):
 
         try:
+
             user = User.objects.get(
                 username__iexact=username
             )
+
         except User.DoesNotExist:
+
             return None
 
         profile, _ = UserProfile.objects.get_or_create(
@@ -1061,14 +1339,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "username": user.username,
         }
 
+    # =========================================================
+    # BAN
+    # =========================================================
+
     @sync_to_async
     def ban_user(self, username):
 
         try:
+
             user = User.objects.get(
                 username__iexact=username
             )
+
         except User.DoesNotExist:
+
             return None
 
         profile, _ = UserProfile.objects.get_or_create(
@@ -1078,7 +1363,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         profile.is_banned = True
 
         profile.save(
-            update_fields=["is_banned"]
+            update_fields=[
+                "is_banned",
+            ]
         )
 
         return {
@@ -1086,14 +1373,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "username": user.username,
         }
 
+    # =========================================================
+    # UNBAN
+    # =========================================================
+
     @sync_to_async
     def unban_user(self, username):
 
         try:
+
             user = User.objects.get(
                 username__iexact=username
             )
+
         except User.DoesNotExist:
+
             return None
 
         profile, _ = UserProfile.objects.get_or_create(
@@ -1103,13 +1397,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         profile.is_banned = False
 
         profile.save(
-            update_fields=["is_banned"]
+            update_fields=[
+                "is_banned",
+            ]
         )
 
         return {
             "id": user.id,
             "username": user.username,
         }
+
+    # =========================================================
+    # USERS
+    # =========================================================
 
     @sync_to_async
     def get_users(self):
@@ -1124,8 +1424,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
             .order_by("username")
         )
 
+    # =========================================================
+    # SYSTEM MESSAGES
+    # =========================================================
 
     async def send_error(self, text):
+
         await self.send(
             text_data=json.dumps({
                 "type": "system",
@@ -1135,6 +1439,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def send_admin_message(self, text):
+
         await self.send(
             text_data=json.dumps({
                 "type": "system",
