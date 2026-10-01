@@ -1,0 +1,77 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NPTV25 Official</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+
+<body>
+
+    <!-- Шапка -->
+    <header class="header">
+        <div class="header-left">
+            <span class="logo">NPTV25</span>
+            <nav class="nav-links">
+                <a href="#">Главная</a>
+                <a href="{% url 'chat' %}">Чат</a>
+                <a href="#">Новости</a>
+                <a href="https://xn--80aneakq8a4c.xn--p1ai/" target="_blank">Бесплатные роблоксы</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            {% if user.is_authenticated %}
+            <span class="user-name">Привет, {{ user.username }}!</span>
+            <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-outline">Выйти</button>
+            </form>
+            {% else %}
+            <a href="{% url 'login' %}" class="btn-outline">Войти</a>
+            <a href="{% url 'register' %}" class="btn-primary">Регистрация</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Контент -->
+
+    <main class="main-content">
+    <div class="card">
+        <h1>Зачем этот сайт?</h1>
+        <p>Данный сайт предназначен для проверки функций, и по приколу.</p>
+    </div>
+
+    <div class="card">
+        <h1>Что значит NPTV25?</h1>
+        <p>Это самая лучшая группа, где обитают самые лучшие люди.</p>
+    </div>
+
+
+    <div class="card">
+        <h1>Как часто здесь появляются обновления?</h1>
+        <p>Каждый раз, когда у разработчика появляется свободное время и натхнение между парами и сном. То есть при хорошем раскладе — по пятницам.</p>
+    </div>
+
+    <div class="card">
+        <h1>Где обещанные бесплатные роблоксы?</h1>
+        <p>Кнопка в шапке работает исключительно на вашей верности проекту. Скидки и робуксы появятся сразу</p>
+    </div>
+
+    <div class="card">
+        <h1>Куда писать, если что-то сломалось?</h1>
+        <p>В наш чат или лично админу. Но сначала обязательно попробуйте перезагрузить роутер и погладить кота.</p>
+    </div>
+    </main>
+
+
+    <!-- Подвал -->
+    <footer class="footer">
+        <p>&copy; Все права защищены и т.д.</p>
+    </footer>
+
+</body>
+
+</html>

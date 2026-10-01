@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход | NPTV25</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+
+    <!-- Шапка -->
+    <header class="header">
+        <div class="header-left">
+            <span class="logo">NPTV25</span>
+            <nav class="nav-links">
+                <a href="{% url 'index' %}">Главная</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Контент -->
+    <main class="main-content">
+        <div class="card" style="max-width: 450px;">
+            <h1 style="margin-bottom: 20px;">Вход</h1>
+
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+
+                <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">
+                    Войти
+                </button>
+            </form>
+
+            <div style="margin-top: 20px;">
+                <a href="{% url 'register' %}" style="color: #bb86fc; text-decoration: none; font-size: 0.95rem;">
+                    Создать аккаунт
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Подвал -->
+    <footer class="footer">
+        <p>&copy; Все права защищены и т.д.</p>
+    </footer>
+
+</body>
+</html>

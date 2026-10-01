@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация | NPTV25</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <span class="logo">NPTV25</span>
+            <nav class="nav-links">
+                <a href="{% url 'index' %}">Главная</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="card">
+            <h1>Регистрация</h1>
+
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+
+                <!-- Чекбокс и текст соглашения -->
+                <div style="margin: 15px 0; font-size: 0.9rem; text-align: left;">
+                    <label style="cursor: pointer;">
+                        <input type="checkbox" required> 
+                        Продолжая регистрацию, я соглашаюсь с <a href="{% url 'terms' %}" target="_blank" style="color: #bb86fc;">пользовательским соглашением</a>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%;">Зарегистрироваться</button>
+            </form>
+
+            <div style="margin-top: 15px;">
+                <a href="{% url 'login' %}" style="color: #b0b0b0; font-size: 0.9rem;">Уже есть аккаунт?</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; Все права защищены и т.д.</p>
+    </footer>
+
+</body>
+</html>

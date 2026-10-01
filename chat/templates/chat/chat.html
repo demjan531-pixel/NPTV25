@@ -1,0 +1,288 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Чат | NPTV25</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body class="chat-page">
+<header class="header">
+    <div class="header-left">
+        <a class="logo" href="{% url 'index' %}">NPTV25</a>
+        <nav class="nav-links">
+            <a href="{% url 'index' %}">Главная</a>
+            <a href="{% url 'chat' %}">Чат</a>
+            <a href="#">Новости</a>
+            <a href="https://xn--80aneakq8a4c.xn--p1ai/" target="_blank">Бесплатные роблоксы</a>
+        </nav>
+    </div>
+    <div class="header-right">
+        <span class="user-name">Привет, {{ user.username }}!</span>
+        <form action="{% url 'logout' %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-outline">Выйти</button>
+        </form>
+    </div>
+</header>
+
+<main class="chat-layout">
+    <aside class="chat-sidebar">
+        <div class="chat-sidebar-title">
+            <span>АКТИВНЫЕ ПОЛЬЗОВАТЕЛИ</span>
+            <span id="online-count" class="online-count">0</span>
+        </div>
+        <div id="active-users" class="active-users"></div>
+    </aside>
+
+    <section class="chat-panel">
+        <div class="chat-header">
+            <div>
+                <h1>Общий чат</h1>
+                <p>Все пользователи сайта общаются здесь</p>
+            </div>
+            <span id="connection-status" class="connection-status">Подключение...</span>
+        </div>
+
+        <div id="messages" class="chat-messages">
+            {% for message in messages %}
+                <article class="chat-message {% if message.is_me %}own-message{% endif %}" data-message-id="{{ message.id }}">
+                    <div class="message-meta">
+                        <strong>{{ message.username }}</strong>
+                        {% if message.is_admin %}<span class="admin-badge">АДМИН</span>{% endif %}
+                        <time>{{ message.created_at }}</time>
+                        {% if is_admin %}
+                            <button type="button" class="delete-message" data-delete-id="{{ message.id }}" title="Удалить сообщение" aria-label="Удалить сообщение">×</button>
+                        {% endif %}
+                    </div>
+                    <div class="message-text">{{ message.text }}</div>
+                </article>
+            {% empty %}
+                <div id="empty-chat" class="empty-chat">Пока сообщений нет. Напиши первым 👋</div>
+            {% endfor %}
+        </div>
+
+        <form id="message-form" class="chat-form">
+            <input
+                id="message-input"
+                type="text"
+                maxlength="2000"
+                autocomplete="off"
+                placeholder="Написать сообщение..."
+            >
+            <button type="submit" class="btn-primary">➤</button>
+        </form>
+    </section>
+</main>
+
+<script>
+    const messages = document.getElementById("messages");
+    const form = document.getElementById("message-form");
+    const input = document.getElementById("message-input");
+    const activeUsers = document.getElementById("active-users");
+    const onlineCount = document.getElementById("online-count");
+    const status = document.getElementById("connection-status");
+    const currentUsername = "{{ user.username|escapejs }}";
+    const currentUserIsAdmin = {{ is_admin|yesno:"true,false" }};
+
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    let socket = null;
+    let reconnectTimer = null;
+    let heartbeatTimer = null;
+
+    function isNearBottom() {
+        return messages.scrollHeight - messages.scrollTop - messages.clientHeight < 100;
+    }
+
+    function scrollToBottom(force = false) {
+        if (force || isNearBottom()) {
+            messages.scrollTop = messages.scrollHeight;
+        }
+    }
+
+    function removeEmptyState() {
+        const empty = document.getElementById("empty-chat");
+        if (empty) empty.remove();
+    }
+
+    function addDeleteButton(meta, id) {
+        if (!currentUserIsAdmin) return;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "delete-message";
+        button.dataset.deleteId = id;
+        button.title = "Удалить сообщение";
+        button.setAttribute("aria-label", "Удалить сообщение");
+        button.textContent = "×";
+        meta.appendChild(button);
+    }
+
+    function addMessage(data) {
+        const shouldScroll = isNearBottom();
+        removeEmptyState();
+
+        const article = document.createElement("article");
+        article.className = "chat-message" + (data.is_me ? " own-message" : "");
+        article.dataset.messageId = data.id;
+
+        const meta = document.createElement("div");
+        meta.className = "message-meta";
+
+        const username = document.createElement("strong");
+        username.textContent = data.username;
+
+        meta.appendChild(username);
+
+        if (data.is_admin) {
+            const badge = document.createElement("span");
+            badge.className = "admin-badge";
+            badge.textContent = "АДМИН";
+            meta.appendChild(badge);
+        }
+
+        const time = document.createElement("time");
+        time.textContent = data.created_at;
+        meta.appendChild(time);
+        addDeleteButton(meta, data.id);
+
+        const text = document.createElement("div");
+        text.className = "message-text";
+        text.textContent = data.text;
+
+        article.append(meta, text);
+        messages.appendChild(article);
+        scrollToBottom(shouldScroll);
+    }
+
+    function removeMessage(id) {
+        const article = messages.querySelector(`[data-message-id="${CSS.escape(String(id))}"]`);
+        if (article) article.remove();
+
+        if (!messages.querySelector(".chat-message")) {
+            const empty = document.createElement("div");
+            empty.id = "empty-chat";
+            empty.className = "empty-chat";
+            empty.textContent = "Пока сообщений нет. Напиши первым 👋";
+            messages.appendChild(empty);
+        }
+    }
+
+    function renderUsers(users) {
+        activeUsers.replaceChildren();
+        onlineCount.textContent = users.length;
+
+        users.forEach(user => {
+            const item = document.createElement("div");
+            item.className = "active-user";
+
+            const dot = document.createElement("span");
+            dot.className = "online-dot";
+
+            const name = document.createElement("span");
+            name.className = "active-user-name";
+            name.textContent = user.username;
+            if (user.username === currentUsername) name.classList.add("current-user");
+
+            item.append(dot, name);
+
+            if (user.is_admin) {
+                const badge = document.createElement("span");
+                badge.className = "admin-badge user-admin-badge";
+                badge.textContent = "АДМИН";
+                item.appendChild(badge);
+            }
+
+            activeUsers.appendChild(item);
+        });
+    }
+
+    function updateStatus(text, connected = false) {
+        status.textContent = text;
+        status.classList.toggle("connected", connected);
+    }
+
+    function startHeartbeat() {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = setInterval(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({type: "heartbeat"}));
+            }
+        }, 15000);
+    }
+
+    function connectSocket() {
+        if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
+
+        updateStatus("Подключение...");
+        socket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/`);
+
+        socket.addEventListener("open", () => {
+            updateStatus("В сети", true);
+            startHeartbeat();
+            input.focus();
+            scrollToBottom(true);
+        });
+
+        socket.addEventListener("close", () => {
+            updateStatus("Нет соединения");
+            clearInterval(heartbeatTimer);
+            clearTimeout(reconnectTimer);
+            reconnectTimer = setTimeout(connectSocket, 2000);
+        });
+
+        socket.addEventListener("error", () => {
+            updateStatus("Ошибка соединения");
+        });
+
+        socket.addEventListener("message", event => {
+            const data = JSON.parse(event.data);
+
+            if (data.type === "message") addMessage(data);
+            if (data.type === "message_deleted") removeMessage(data.id);
+            if (data.type === "presence") renderUsers(data.users);
+        });
+    }
+
+    form.addEventListener("submit", event => {
+        event.preventDefault();
+        const text = input.value.trim();
+
+        if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
+
+        socket.send(JSON.stringify({
+            type: "message",
+            message: text
+        }));
+
+        input.value = "";
+        input.focus();
+    });
+
+    messages.addEventListener("click", event => {
+        const button = event.target.closest("[data-delete-id]");
+        if (!button || !currentUserIsAdmin) return;
+        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+        const id = Number(button.dataset.deleteId);
+        if (!Number.isInteger(id)) return;
+
+        socket.send(JSON.stringify({
+            type: "delete_message",
+            id: id
+        }));
+    });
+
+    input.addEventListener("keydown", event => {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            form.requestSubmit();
+        }
+    });
+
+    connectSocket();
+    scrollToBottom(true);
+</script>
+</body>
+</html>
