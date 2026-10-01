@@ -1,191 +1,108 @@
 import json
-
-import redis.asyncio as redis
-from channels.db import database_sync_to_async
+from datetime import timedelta
+from django.utils import timezone
+from django.contrib.auth.models import User
 from channels.generic.websocket import AsyncWebsocketConsumer
-from django.conf import settings
-
-from .models import Message
-
-
-PRESENCE_TTL = 35
-PRESENCE_PREFIX = "nptv25:presence:"
-
+from asgiref.sync import sync_to_async
+from .models import Message, UserProfile
 
 class ChatConsumer(AsyncWebsocketConsumer):
-    room_group_name = "nptv25_general_chat"
-
-    async def connect(self):
-        user = self.scope.get("user")
-        if not user or not user.is_authenticated:
-            await self.close(code=4001)
-            return
-
-        self.user = user
-        self.redis = redis.from_url(settings.REDIS_URL, decode_responses=True)
-
-        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-        await self._set_presence()
-        await self.accept()
-
-        await self.broadcast_presence()
-
-    async def disconnect(self, close_code):
-        if not hasattr(self, "redis"):
-            return
-
-        try:
-            await self.channel_layer.group_discard(
-                self.room_group_name, self.channel_name
-            )
-            await self.redis.delete(self._presence_key())
-            await self.broadcast_presence()
-        finally:
-            await self.redis.aclose()
-
     async def receive(self, text_data):
-        try:
-            data = json.loads(text_data)
-        except (json.JSONDecodeError, TypeError):
+        data = json.loads(text_data)
+        message_text = data.get('message', '').strip()
+        user = self.scope['user']
+
+        if not user.is_authenticated:
             return
 
-        message_type = data.get("type")
-
-        if message_type == "heartbeat":
-            await self._set_presence()
-            await self.broadcast_presence()
+        # Проверка на бан
+        profile, _ = await sync_to_async(UserProfile.objects.get_or_create)(user=user)
+        if profile.is_banned:
+            await self.send(text_data=json.dumps({'error': 'Вы забанены.'}))
             return
 
-        if message_type == "message":
-            await self.handle_new_message(data)
+        # Обработка команд администратора
+        if message_text.startswith('/'):
+            if not user.is_superuser:
+                await self.send(text_data=json.dumps({'error': 'У вас нет прав для выполнения этой команды.'}))
+                return
+
+            parts = message_text.split(' ', 2)
+            command = parts[0].lower()
+
+            # Команда /clear — очистка всех сообщений
+            if command == '/clear':
+                await sync_to_async(Message.objects.all().delete)()
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {'type': 'chat_clear'}
+                )
+                return
+
+            # Команда /ban <username>
+            elif command == '/ban' and len(parts) > 1:
+                target_name = parts[1]
+                target_user = await sync_to_async(User.objects.filter(username=target_name).first)()
+                if target_user:
+                    target_profile, _ = await sync_to_async(UserProfile.objects.get_or_create)(user=target_user)
+                    target_profile.is_banned = True
+                    await sync_to_async(target_profile.save)()
+                    await self.send_system_message(f'Пользователь {target_name} забанен.')
+                return
+
+            # Команда /mute <username> <минуты>
+            elif command == '/mute' and len(parts) > 2:
+                target_name = parts[1]
+                try:
+                    minutes = int(parts[2])
+                except ValueError:
+                    return
+
+                target_user = await sync_to_async(User.objects.filter(username=target_name).first)()
+                if target_user:
+                    target_profile, _ = await sync_to_async(UserProfile.objects.get_or_create)(user=target_user)
+                    target_profile.is_muted = True
+                    target_profile.muted_until = timezone.now() + timedelta(minutes=minutes)
+                    await sync_to_async(target_profile.save)()
+                    await self.send_system_message(f'Пользователь {target_name} замучен на {minutes} минут.')
+                return
+
+            # Команда /prefix <username> <префикс>
+            elif command == '/prefix' and len(parts) > 2:
+                target_name = parts[1]
+                new_prefix = parts[2]
+                target_user = await sync_to_async(User.objects.filter(username=target_name).first)()
+                if target_user:
+                    target_profile, _ = await sync_to_async(UserProfile.objects.get_or_create)(user=target_user)
+                    target_profile.prefix = new_prefix
+                    await sync_to_async(target_profile.save)()
+                    await self.send_system_message(f'Префикс "{new_prefix}" установлен для {target_name}.')
+                return
+
+        # Проверка мута перед отправкой обычного сообщения
+        is_muted = await sync_to_async(profile.check_mute_status)()
+        if is_muted:
+            await self.send(text_data=json.dumps({'error': 'Вы временно замучены.'}))
             return
 
-        if message_type == "delete_message":
-            await self.handle_delete_message(data)
+        # Отправка обычного сообщения с учетом префикса
+        prefix = f"[{profile.prefix}] " if profile.prefix else ""
+        full_message = f"{prefix}{user.username}: {message_text}"
 
-    async def handle_new_message(self, data):
-        text = str(data.get("message", "")).strip()
-        if not text:
-            return
-        if len(text) > 2000:
-            text = text[:2000]
-
-        message = await self.save_message(text)
+        await sync_to_async(Message.objects.create)(user=user, content=message_text)
 
         await self.channel_layer.group_send(
             self.room_group_name,
             {
-                "type": "chat_message",
-                "id": message["id"],
-                "username": self.user.username,
-                "text": text,
-                "created_at": message["created_at"],
-                "user_id": self.user.id,
-                "is_admin": self.is_admin,
-            },
+                'type': 'chat_message',
+                'message': full_message,
+                'username': user.username,
+                'prefix': profile.prefix
+            }
         )
 
-    async def handle_delete_message(self, data):
-        if not self.is_admin:
-            return
+    async def chat_clear(self, event):
+        await self.send(text_data=json.dumps({'type': 'clear'}))
 
-        try:
-            message_id = int(data.get("id"))
-        except (TypeError, ValueError):
-            return
-
-        deleted = await self.delete_message(message_id)
-        if not deleted:
-            return
-
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                "type": "message_deleted",
-                "id": message_id,
-            },
-        )
-
-    async def chat_message(self, event):
-        await self.send(text_data=json.dumps({
-            "type": "message",
-            "id": event["id"],
-            "username": event["username"],
-            "text": event["text"],
-            "created_at": event["created_at"],
-            "is_me": event["user_id"] == self.user.id,
-            "is_admin": event["is_admin"],
-        }))
-
-    async def message_deleted(self, event):
-        await self.send(text_data=json.dumps({
-            "type": "message_deleted",
-            "id": event["id"],
-        }))
-
-    async def presence_message(self, event):
-        await self.send(text_data=json.dumps({
-            "type": "presence",
-            "users": event["users"],
-        }))
-
-    async def broadcast_presence(self):
-        users = await self.get_active_users()
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {"type": "presence_message", "users": users},
-        )
-
-    async def get_active_users(self):
-        keys = []
-        async for key in self.redis.scan_iter(match=f"{PRESENCE_PREFIX}*"):
-            keys.append(key)
-
-        if not keys:
-            return []
-
-        values = await self.redis.mget(keys)
-        users = []
-        for value in values:
-            if not value:
-                continue
-            try:
-                users.append(json.loads(value))
-            except (json.JSONDecodeError, TypeError):
-                # Compatibility with presence entries created by the older version.
-                users.append({"username": value, "is_admin": False})
-
-        return sorted(users, key=lambda item: item["username"].lower())
-
-    async def _set_presence(self):
-        await self.redis.setex(
-            self._presence_key(),
-            PRESENCE_TTL,
-            json.dumps({
-                "username": self.user.username,
-                "is_admin": self.is_admin,
-            }),
-        )
-
-    @property
-    def is_admin(self):
-        return bool(self.user.is_staff or self.user.is_superuser)
-
-    def _presence_key(self):
-        return f"{PRESENCE_PREFIX}{self.user.id}"
-
-    @database_sync_to_async
-    def save_message(self, text):
-        message = Message.objects.create(user=self.user, text=text)
-        return {
-            "id": message.id,
-            "created_at": message.created_at.strftime("%H:%M"),
-        }
-
-    @database_sync_to_async
-    def delete_message(self, message_id):
-        if not self.is_admin:
-            return False
-
-        deleted, _ = Message.objects.filter(id=message_id).delete()
-        return deleted > 0
+    async def send_system_message(self, text):
+        await self.send(text_data=json.dumps({'message': f'[Система]: {text}'}))
