@@ -6,6 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Чат | NPTV25</title>
     <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <style>
+        .user-prefix {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 6px;
+            padding: 2px 7px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.10);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            vertical-align: middle;
+        }
+    </style>
 </head>
 <body class="chat-page">
     <header class="header">
@@ -46,8 +60,15 @@
                 {% for message in messages %}
                     <article class="chat-message {% if message.is_me %}own-message{% endif %}" data-message-id="{{ message.id }}">
                         <div class="message-meta">
-                            <strong>{{ message.username }}</strong>
-                            {% if message.is_admin %}<span class="admin-badge">АДМИН</span>{% endif %}
+                            {% if message.prefix %}
+    <span class="user-prefix">{{ message.prefix }}</span>
+{% endif %}
+
+<strong>{{ message.username }}</strong>
+
+{% if message.is_admin %}
+    <span class="admin-badge">АДМИН</span>
+{% endif %}
                             <time>{{ message.created_at }}</time>
                             {% if is_admin %}
                                 <button type="button" class="delete-message" data-delete-id="{{ message.id }}" title="Удалить сообщение" aria-label="Удалить сообщение">×</button>
@@ -128,6 +149,13 @@
         const meta = document.createElement("div");
         meta.className = "message-meta";
 
+        if (data.prefix) {
+            const prefix = document.createElement("span");
+            prefix.className = "user-prefix";
+            prefix.textContent = data.prefix;
+            meta.appendChild(prefix);
+        }
+
         const username = document.createElement("strong");
         username.textContent = data.username;
 
@@ -180,6 +208,13 @@
 
             const dot = document.createElement("span");
             dot.className = "online-dot";
+
+            if (user.prefix) {
+                const prefix = document.createElement("span");
+                prefix.className = "user-prefix";
+                prefix.textContent = user.prefix;
+                item.appendChild(prefix);
+            }
 
             const name = document.createElement("span");
             name.className = "active-user-name";
