@@ -259,22 +259,40 @@
         });
 
         socket.addEventListener("message", event => {
-            let data;
+    const data = JSON.parse(event.data);
 
-            try {
-                data = JSON.parse(event.data);
-            } catch {
-                return;
-            }
+    if (data.type === "message") {
+        addMessage(data);
+    }
 
-            if (data.type === "message") addMessage(data);
-            if (data.type === "message_deleted") removeMessage(data.id);
-            if (data.type === "presence") renderUsers(data.users || []);
+    if (data.type === "message_deleted") {
+        removeMessage(data.id);
+    }
 
-            if (data.type === "error") {
-                updateStatus(data.message || "Ошибка", false);
-            }
-        });
+    if (data.type === "chat_cleared") {
+        messages.innerHTML = "";
+
+        const empty = document.createElement("div");
+        empty.id = "empty-chat";
+        empty.className = "empty-chat";
+        empty.textContent = "Пока сообщений нет. Напиши первым 👋";
+
+        messages.appendChild(empty);
+    }
+
+    if (data.type === "presence") {
+        renderUsers(data.users);
+    }
+
+    if (data.type === "system") {
+        showSystemMessage(data.message, data.error);
+    }
+
+    if (data.type === "force_disconnect") {
+        alert(data.reason || "Ты отключён от чата.");
+        socket.close();
+    }
+});
     }
 
     form.addEventListener("submit", event => {
@@ -317,7 +335,30 @@
             form.requestSubmit();
         }
     });
+    function showSystemMessage(text, error = false) {
+    const article = document.createElement("article");
+    article.className = "chat-message";
 
+    const meta = document.createElement("div");
+    meta.className = "message-meta";
+
+    const username = document.createElement("strong");
+    username.textContent = "Система";
+
+    const message = document.createElement("div");
+    message.className = "message-text";
+    message.textContent = text;
+
+    if (error) {
+        message.style.color = "#ff6b6b";
+    }
+
+    meta.appendChild(username);
+    article.append(meta, message);
+
+    messages.appendChild(article);
+    scrollToBottom(true);
+}
     connectSocket();
     scrollToBottom(true);
 </script>
