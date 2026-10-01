@@ -9,11 +9,19 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+html,
+body {
+    width: 100%;
+    min-height: 100%;
+}
+
 body {
     background-color: #313338;
     color: #dbdee1;
+
     display: flex;
     flex-direction: column;
+
     min-height: 100vh;
 }
 
@@ -24,11 +32,16 @@ body {
 
 .header {
     background-color: #2b2d31;
+
     display: flex;
     justify-content: space-between;
     align-items: center;
+
     padding: 15px 30px;
+
     border-bottom: 1px solid #1e1f22;
+
+    flex: 0 0 auto;
 }
 
 .header-left {
@@ -38,29 +51,41 @@ body {
 }
 
 
-/* Логотип */
+/* =========================================
+   ЛОГОТИП
+   ========================================= */
 
 .logo {
     font-weight: bold;
+
     font-size: 1.2rem;
+
     color: #f2f3f5;
+
     text-transform: uppercase;
+
     letter-spacing: 1px;
 }
 
 
-/* Навигация */
+/* =========================================
+   НАВИГАЦИЯ
+   ========================================= */
 
 .nav-links {
     display: flex;
+
     gap: 20px;
 }
 
 .nav-links a,
 .account-link {
     color: #b5bac1;
+
     text-decoration: none;
+
     transition: color 0.2s;
+
     font-size: 0.95rem;
 }
 
@@ -76,35 +101,45 @@ body {
 
 .header-right {
     display: flex;
+
     align-items: center;
+
     gap: 10px;
 }
 
 
-/* Приветствие пользователя */
+/* =========================================
+   ИМЯ ПОЛЬЗОВАТЕЛЯ
+   ========================================= */
 
 .user-name {
     color: #dbdee1;
+
     font-size: 0.9rem;
+
     margin-right: 8px;
 }
 
 
 /* =========================================
-   КНОПКА "ВОЙТИ" / "ВЫЙТИ"
+   КНОПКА ВОЙТИ / ВЫЙТИ
    ========================================= */
 
 .btn-outline {
     color: #dbdee1;
+
     background-color: transparent;
 
     border: 1px solid #4e5058;
 
     padding: 7px 16px;
+
     border-radius: 6px;
 
     text-decoration: none;
+
     font-size: 0.9rem;
+
     font-weight: 500;
 
     cursor: pointer;
@@ -117,24 +152,30 @@ body {
 
 .btn-outline:hover {
     background-color: #4e5058;
+
     border-color: #686d75;
+
     color: #ffffff;
 }
 
 
 /* =========================================
-   КНОПКА "РЕГИСТРАЦИЯ"
+   КНОПКА РЕГИСТРАЦИЯ
    ========================================= */
 
 .btn-primary {
     background-color: #5865f2;
+
     color: #ffffff;
 
     padding: 7px 16px;
+
     border-radius: 6px;
 
     text-decoration: none;
+
     font-size: 0.9rem;
+
     font-weight: 600;
 
     cursor: pointer;
@@ -146,6 +187,7 @@ body {
 
 .btn-primary:hover {
     background-color: #4752c4;
+
     transform: translateY(-1px);
 }
 
@@ -158,7 +200,9 @@ body {
     flex: 1;
 
     display: flex;
+
     justify-content: center;
+
     align-items: center;
 
     padding: 40px 20px;
@@ -176,11 +220,13 @@ body {
 
     border-radius: 8px;
 
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+    box-shadow:
+        0 8px 16px rgba(0, 0, 0, 0.25);
 
     text-align: center;
 
     max-width: 500px;
+
     width: 100%;
 
     border: 1px solid #1e1f22;
@@ -188,13 +234,17 @@ body {
 
 .card h1 {
     font-size: 2rem;
+
     margin-bottom: 15px;
+
     color: #f2f3f5;
 }
 
 .card p {
     font-size: 1.1rem;
+
     color: #b5bac1;
+
     margin-bottom: 25px;
 }
 
@@ -207,6 +257,7 @@ body {
     display: inline-block;
 
     background-color: #5865f2;
+
     color: #ffffff;
 
     padding: 12px 24px;
@@ -214,6 +265,7 @@ body {
     border-radius: 6px;
 
     text-decoration: none;
+
     font-weight: bold;
 
     transition:
@@ -223,6 +275,7 @@ body {
 
 .btn:hover {
     background-color: #4752c4;
+
     transform: translateY(-1px);
 }
 
@@ -253,7 +306,9 @@ textarea {
 }
 
 
-/* Placeholder */
+/* =========================================
+   PLACEHOLDER
+   ========================================= */
 
 input::placeholder,
 textarea::placeholder {
@@ -261,7 +316,9 @@ textarea::placeholder {
 }
 
 
-/* Фокус на поле */
+/* =========================================
+   ФОКУС
+   ========================================= */
 
 input[type="text"]:focus,
 input[type="password"]:focus,
@@ -269,12 +326,13 @@ input[type="email"]:focus,
 textarea:focus {
     border-color: #5865f2;
 
-    box-shadow: 0 0 0 1px #5865f2;
+    box-shadow:
+        0 0 0 1px #5865f2;
 }
 
 
 /* =========================================
-   ПОДВАЛ (FOOTER)
+   ПОДВАЛ
    ========================================= */
 
 .footer {
@@ -293,57 +351,11 @@ textarea:focus {
 
 
 /* =========================================
-   ДОПОЛНИТЕЛЬНО: КНОПКИ FORM
+   КНОПКИ FORM
    ========================================= */
 
 button {
     font-family: inherit;
-}
-
-
-/* =========================================
-   АДАПТИВНОСТЬ ДЛЯ ТЕЛЕФОНА
-   ========================================= */
-
-@media (max-width: 600px) {
-
-    .header {
-        padding: 12px 15px;
-    }
-
-    .header-left {
-        gap: 15px;
-    }
-
-    .nav-links {
-        gap: 10px;
-    }
-
-    .nav-links a {
-        font-size: 0.85rem;
-    }
-
-    .header-right {
-        gap: 6px;
-    }
-
-    .btn-outline,
-    .btn-primary {
-        padding: 6px 10px;
-        font-size: 0.8rem;
-    }
-
-    .user-name {
-        display: none;
-    }
-
-    .card {
-        padding: 25px 20px;
-    }
-
-    .card h1 {
-        font-size: 1.6rem;
-    }
 }
 
 
@@ -353,25 +365,47 @@ button {
 
 .chat-page {
     overflow: hidden;
+
+    width: 100%;
+
+    height: 100vh;
+
+    min-height: 100vh;
 }
 
-.chat-layout {
-    flex: 1;
-    min-height: 0;
 
+/* =========================================
+   CHAT LAYOUT
+   ========================================= */
+
+.chat-layout {
     display: grid;
 
     grid-template-columns: 250px minmax(0, 1fr);
 
-    max-width: 1400px;
     width: 100%;
+
+    max-width: 1400px;
+
+    height: calc(100vh - 67px);
 
     margin: 0 auto;
 
     padding: 20px;
 
     gap: 14px;
+
+    min-height: 0;
+
+    overflow: hidden;
+
+    flex: 0 0 auto;
 }
+
+
+/* =========================================
+   SIDEBAR / CHAT PANEL
+   ========================================= */
 
 .chat-sidebar,
 .chat-panel {
@@ -381,20 +415,36 @@ button {
 
     border-radius: 8px;
 
+    min-width: 0;
+
     min-height: 0;
+
+    height: 100%;
 }
+
+
+/* =========================================
+   SIDEBAR
+   ========================================= */
 
 .chat-sidebar {
     display: flex;
+
     flex-direction: column;
 
     overflow: hidden;
 }
 
+
+/* =========================================
+   SIDEBAR TITLE
+   ========================================= */
+
 .chat-sidebar-title {
     display: flex;
 
     justify-content: space-between;
+
     align-items: center;
 
     padding: 18px 16px;
@@ -408,7 +458,14 @@ button {
     letter-spacing: 0.5px;
 
     border-bottom: 1px solid #1e1f22;
+
+    flex: 0 0 auto;
 }
+
+
+/* =========================================
+   ONLINE COUNT
+   ========================================= */
 
 .online-count {
     min-width: 24px;
@@ -424,10 +481,17 @@ button {
     background: #1e1f22;
 }
 
+
+/* =========================================
+   ACTIVE USERS
+   ========================================= */
+
 .active-users {
     padding: 8px;
 
     overflow-y: auto;
+
+    min-height: 0;
 }
 
 .active-user {
@@ -450,8 +514,14 @@ button {
     background: #35373c;
 }
 
+
+/* =========================================
+   ONLINE DOT
+   ========================================= */
+
 .online-dot {
     width: 9px;
+
     height: 9px;
 
     min-width: 9px;
@@ -460,12 +530,23 @@ button {
 
     background: #23a559;
 
-    box-shadow: 0 0 0 2px #2b2d31;
+    box-shadow:
+        0 0 0 2px #2b2d31;
 }
+
+
+/* =========================================
+   CURRENT USER
+   ========================================= */
 
 .current-user {
     font-weight: 700;
 }
+
+
+/* =========================================
+   ACTIVE USER NAME
+   ========================================= */
 
 .active-user-name {
     min-width: 0;
@@ -490,6 +571,11 @@ button {
     overflow: hidden;
 }
 
+
+/* =========================================
+   CHAT HEADER
+   ========================================= */
+
 .chat-header {
     display: flex;
 
@@ -502,6 +588,8 @@ button {
     padding: 16px 20px;
 
     border-bottom: 1px solid #1e1f22;
+
+    flex: 0 0 auto;
 }
 
 .chat-header h1 {
@@ -517,6 +605,11 @@ button {
 
     font-size: 0.85rem;
 }
+
+
+/* =========================================
+   CONNECTION STATUS
+   ========================================= */
 
 .connection-status {
     color: #ed4245;
@@ -536,11 +629,14 @@ button {
    ========================================= */
 
 .chat-messages {
-    flex: 1;
+    flex: 1 1 auto;
+
+    min-width: 0;
 
     min-height: 0;
 
     overflow-y: auto;
+
     overflow-x: hidden;
 
     padding: 18px 20px;
@@ -549,7 +645,6 @@ button {
 
     flex-direction: column;
 
-    /* Чужие сообщения начинаются слева */
     align-items: flex-start;
 
     overscroll-behavior: contain;
@@ -573,7 +668,10 @@ button {
 
     align-self: flex-start;
 
+    margin-top: 0;
+
     margin-left: 0;
+
     margin-right: 0;
 
     margin-bottom: 13px;
@@ -581,7 +679,8 @@ button {
 
 
 /* =========================================
-   МОЁ СООБЩЕНИЕ — СПРАВА
+   МОЁ СООБЩЕНИЕ
+   ВСЕГДА СПРАВА
    ========================================= */
 
 .chat-message.own-message {
@@ -591,18 +690,18 @@ button {
 
     max-width: min(80%, 760px) !important;
 
+    margin-top: 0 !important;
+
     margin-left: auto !important;
 
     margin-right: 0 !important;
-
-    margin-top: 0 !important;
 
     margin-bottom: 13px !important;
 }
 
 
 /* =========================================
-   META СООБЩЕНИЯ
+   MESSAGE META
    ========================================= */
 
 .message-meta {
@@ -648,9 +747,9 @@ button {
 .message-text {
     display: inline-block;
 
-    max-width: 100%;
-
     width: fit-content;
+
+    max-width: 100%;
 
     padding: 8px 11px;
 
@@ -669,7 +768,7 @@ button {
 
 
 /* =========================================
-   МОЁ СООБЩЕНИЕ
+   МОЙ ТЕКСТ
    ========================================= */
 
 .own-message .message-text {
@@ -774,6 +873,11 @@ button {
     letter-spacing: 0.3px;
 }
 
+
+/* =========================================
+   ADMIN BADGE В СПИСКЕ ПОЛЬЗОВАТЕЛЕЙ
+   ========================================= */
+
 .user-admin-badge {
     margin-left: auto;
 }
@@ -818,10 +922,10 @@ button {
 
 
 /* =========================================
-   ДОПОЛНИТЕЛЬНАЯ ЗАЩИТА ВЫРАВНИВАНИЯ
+   ЗАЩИТА ВЫРАВНИВАНИЯ
    ========================================= */
 
-/* Чужие сообщения всегда слева */
+/* Чужие сообщения */
 
 .chat-messages > .chat-message:not(.own-message) {
     align-self: flex-start !important;
@@ -832,7 +936,7 @@ button {
 }
 
 
-/* Мои сообщения всегда справа */
+/* Мои сообщения */
 
 .chat-messages > .chat-message.own-message {
     align-self: flex-end !important;
@@ -852,11 +956,15 @@ button {
     .chat-layout {
         grid-template-columns: 1fr;
 
+        height: calc(100vh - 61px);
+
         padding: 10px;
     }
 
     .chat-sidebar {
         max-height: 150px;
+
+        height: auto;
     }
 
     .active-users {
@@ -887,5 +995,52 @@ button {
 
     .delete-message {
         opacity: 1;
+    }
+}
+
+
+/* =========================================
+   МАЛЕНЬКИЙ ЭКРАН
+   ========================================= */
+
+@media (max-width: 600px) {
+
+    .header {
+        padding: 12px 15px;
+    }
+
+    .header-left {
+        gap: 15px;
+    }
+
+    .nav-links {
+        gap: 10px;
+    }
+
+    .nav-links a {
+        font-size: 0.85rem;
+    }
+
+    .header-right {
+        gap: 6px;
+    }
+
+    .btn-outline,
+    .btn-primary {
+        padding: 6px 10px;
+
+        font-size: 0.8rem;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .card {
+        padding: 25px 20px;
+    }
+
+    .card h1 {
+        font-size: 1.6rem;
     }
 }
