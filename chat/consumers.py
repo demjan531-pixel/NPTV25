@@ -3,7 +3,7 @@ import os
 import shlex
 import time
 from datetime import timedelta
-
+import re
 import redis.asyncio as redis
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -27,6 +27,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         self.user = user
+
+        if await self.is_banned():
+            await self.close(code=4003)
+            return
+
         self.room_group_name = "chat_global"
         self.user_group_name = f"user_{user.id}"
 
@@ -143,6 +148,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
             return
 
+        # Антиспам
+        if not await self.check_antispam(message):
+            return
+
         # Сохраняем сообщение
         saved = await self.save_message(message)
 
@@ -193,7 +202,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "/kick <username> | "
                 "/delete <id> | "
                 "/clear | "
-                "/prefix <username> <префикс> | "
+                "/prefix <username> <префикс> <цвет> | "
                 "/unprefix <username> | "
                 "/users | "
                 "/online"
@@ -205,33 +214,40 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # -----------------------------------------------------
 
         if command == "/prefix":
-
-            if len(parts) < 3:
+            if len(parts) < 4:
                 await self.send_admin_message(
-                    'Использование: /prefix <username> <префикс>'
+                    'Использование: /prefix <username> <prefix> <color>'
                 )
                 return
 
             username = parts[1]
-
-            # Всё после username становится префиксом.
-            prefix = " ".join(parts[2:]).strip()
-
-            if not prefix:
-                await self.send_admin_message(
-                    "Префикс не может быть пустым."
-                )
-                return
+            prefix = parts[2]
+            color = parts[3].lower()
 
             if len(prefix) > 50:
                 await self.send_admin_message(
-                    "Префикс слишком длинный. Максимум 50 символов."
+                    "Префикс не может быть длиннее 50 символов."
+                )
+                return
+
+            allowed_colors = {
+                "red", "blue", "green", "yellow", "orange", "purple",
+                "pink", "cyan", "white", "black", "gray", "grey",
+                "gold", "lime", "aqua", "magenta",
+            }
+
+            if color not in allowed_colors and not re.fullmatch(
+                r"#[0-9a-fA-F]{6}", color
+            ):
+                await self.send_admin_message(
+                    "Недопустимый цвет. Например: red, blue или #ff0000."
                 )
                 return
 
             result = await self.set_prefix(
                 username,
                 prefix,
+                color,
             )
 
             if not result:
@@ -241,12 +257,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 return
 
             await self.send_admin_message(
-                f"✓ Префикс для {username} установлен: {prefix}"
+                f"✓ Префикс {username} изменён: [{prefix}] ({color})"
             )
 
-            # Обновляем список пользователей у всех
             await self.broadcast_presence()
-
             return
 
         # -----------------------------------------------------
@@ -265,6 +279,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             result = await self.set_prefix(
                 username,
+                "",
                 "",
             )
 
@@ -586,7 +601,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "type": "message",
             "id": event["id"],
             "username": event["username"],
-            "prefix": event["prefix"],
+            "prefix": event.get("prefix", ""),
+            "prefix_color": event.get("prefix_color", ""),
             "text": event["text"],
             "created_at": event["created_at"],
             "is_me": (
@@ -774,6 +790,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 result.append({
                     "username": user["username"],
                     "prefix": profile["prefix"],
+                    "prefix_color": profile["prefix_color"],
                     "is_admin": profile["is_admin"],
                 })
 
@@ -798,6 +815,56 @@ class ChatConsumer(AsyncWebsocketConsumer):
             },
         )
 
+    async def check_antispam(self, message):
+        """
+        Redis anti-spam:
+        - minimum 0.8 sec between messages
+        - max 5 messages per 10 sec
+        - blocks exact duplicate messages for 10 sec
+        """
+        client = self.redis_client()
+
+        if client is None:
+            return True
+
+        user_id = self.user.id
+        cooldown_key = f"nptv25:spam:cooldown:{user_id}"
+        count_key = f"nptv25:spam:count:{user_id}"
+        last_key = f"nptv25:spam:last:{user_id}"
+
+        try:
+            if await client.exists(cooldown_key):
+                await self.send_error(
+                    "Не так быстро. Подожди немного."
+                )
+                return False
+
+            count = await client.incr(count_key)
+
+            if count == 1:
+                await client.expire(count_key, 10)
+
+            if count > 5:
+                await self.send_error(
+                    "Антиспам: максимум 5 сообщений за 10 секунд."
+                )
+                return False
+
+            last_message = await client.get(last_key)
+
+            if last_message == message:
+                await self.send_error(
+                    "Не отправляй одно и то же сообщение подряд."
+                )
+                return False
+
+            await client.set(last_key, message, ex=10)
+            await client.set(cooldown_key, "1", ex=1)
+
+            return True
+        finally:
+            await client.aclose()
+
     # =========================================================
     # DATABASE
     # =========================================================
@@ -809,6 +876,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.user.is_staff or
             self.user.is_superuser
         )
+
+    @sync_to_async
+    def is_banned(self):
+        profile, _ = UserProfile.objects.get_or_create(
+            user=self.user
+        )
+        return bool(profile.is_banned)
 
     @sync_to_async
     def save_message(self, text):
@@ -826,6 +900,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "id": message.id,
             "username": self.user.username,
             "prefix": profile.prefix or "",
+            "prefix_color": getattr(profile, "prefix_color", "") or "",
             "text": message.content,
             "created_at": timezone.localtime(
                 message.timestamp
@@ -849,6 +924,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         return {
             "prefix": profile.prefix or "",
+            "prefix_color": getattr(profile, "prefix_color", "") or "",
             "is_admin": bool(
                 user.is_staff or
                 user.is_superuser
@@ -895,8 +971,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return None
 
     @sync_to_async
-    def set_prefix(self, username, prefix):
-
+    def set_prefix(self, username, prefix, color=""):
         try:
             user = User.objects.get(
                 username__iexact=username
@@ -909,14 +984,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
         profile.prefix = prefix
-        profile.save(
-            update_fields=["prefix"]
-        )
+        if hasattr(profile, "prefix_color"):
+            profile.prefix_color = color
+
+        update_fields = ["prefix"]
+        if hasattr(profile, "prefix_color"):
+            update_fields.append("prefix_color")
+
+        profile.save(update_fields=update_fields)
 
         return {
             "id": user.id,
             "username": user.username,
             "prefix": prefix,
+            "prefix_color": color,
         }
 
     @sync_to_async

@@ -61,7 +61,7 @@
                     <article class="chat-message {% if message.is_me %}own-message{% endif %}" data-message-id="{{ message.id }}">
                         <div class="message-meta">
                             {% if message.prefix %}
-    <span class="user-prefix">{{ message.prefix }}</span>
+    <span class="user-prefix" style="color: {{ message.prefix_color|default:'' }};">{{ message.prefix }}</span>
 {% endif %}
 
 <strong>{{ message.username }}</strong>
@@ -153,6 +153,7 @@
             const prefix = document.createElement("span");
             prefix.className = "user-prefix";
             prefix.textContent = data.prefix;
+            if (data.prefix_color) prefix.style.color = data.prefix_color;
             meta.appendChild(prefix);
         }
 
@@ -213,6 +214,7 @@
                 const prefix = document.createElement("span");
                 prefix.className = "user-prefix";
                 prefix.textContent = user.prefix;
+                if (user.prefix_color) prefix.style.color = user.prefix_color;
                 item.appendChild(prefix);
             }
 

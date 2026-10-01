@@ -15,6 +15,11 @@ class UserProfile(models.Model):
         null=True,
         default=''
     )
+    prefix_color = models.CharField(
+    max_length=20,
+    blank=True,
+    default="",
+    )
     is_muted = models.BooleanField(default=False)
     muted_until = models.DateTimeField(null=True, blank=True)
     is_banned = models.BooleanField(default=False)
