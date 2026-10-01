@@ -8,74 +8,69 @@
     <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
 <body class="chat-page">
-<header class="header">
-    <div class="header-left">
-        <a class="logo" href="{% url 'index' %}">NPTV25</a>
-        <nav class="nav-links">
-            <a href="{% url 'index' %}">Главная</a>
-            <a href="{% url 'chat' %}">Чат</a>
-            <a href="#">Новости</a>
-            <a href="https://xn--80aneakq8a4c.xn--p1ai/" target="_blank">Бесплатные роблоксы</a>
-        </nav>
-    </div>
-    <div class="header-right">
-        <span class="user-name">Привет, {{ user.username }}!</span>
-        <form action="{% url 'logout' %}" method="post" style="display:inline;">
-            {% csrf_token %}
-            <button type="submit" class="btn-outline">Выйти</button>
-        </form>
-    </div>
-</header>
-
-<main class="chat-layout">
-    <aside class="chat-sidebar">
-        <div class="chat-sidebar-title">
-            <span>АКТИВНЫЕ ПОЛЬЗОВАТЕЛИ</span>
-            <span id="online-count" class="online-count">0</span>
+    <header class="header">
+        <div class="header-left">
+            <a class="logo" href="{% url 'index' %}">NPTV25</a>
+            <nav class="nav-links">
+                <a href="{% url 'index' %}">Главная</a>
+                <a href="{% url 'chat' %}">Чат</a>
+                <a href="#">Новости</a>
+                <a href="https://xn--80aneakq8a4c.xn--p1ai/" target="_blank">Бесплатные роблоксы</a>
+            </nav>
         </div>
-        <div id="active-users" class="active-users"></div>
-    </aside>
-
-    <section class="chat-panel">
-        <div class="chat-header">
-            <div>
-                <h1>Общий чат</h1>
-                <p>Все пользователи сайта общаются здесь</p>
+        <div class="header-right">
+            <span class="user-name">Привет, {{ user.username }}!</span>
+            <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-outline">Выйти</button>
+            </form>
+        </div>
+    </header>
+    <main class="chat-layout">
+        <aside class="chat-sidebar">
+            <div class="chat-sidebar-title">
+                <span>АКТИВНЫЕ ПОЛЬЗОВАТЕЛИ</span>
+                <span id="online-count" class="online-count">0</span>
             </div>
-            <span id="connection-status" class="connection-status">Подключение...</span>
-        </div>
-
-        <div id="messages" class="chat-messages">
-            {% for message in messages %}
-                <article class="chat-message {% if message.is_me %}own-message{% endif %}" data-message-id="{{ message.id }}">
-                    <div class="message-meta">
-                        <strong>{{ message.username }}</strong>
-                        {% if message.is_admin %}<span class="admin-badge">АДМИН</span>{% endif %}
-                        <time>{{ message.created_at }}</time>
-                        {% if is_admin %}
-                            <button type="button" class="delete-message" data-delete-id="{{ message.id }}" title="Удалить сообщение" aria-label="Удалить сообщение">×</button>
-                        {% endif %}
-                    </div>
-                    <div class="message-text">{{ message.text }}</div>
-                </article>
-            {% empty %}
-                <div id="empty-chat" class="empty-chat">Пока сообщений нет. Напиши первым 👋</div>
-            {% endfor %}
-        </div>
-
-        <form id="message-form" class="chat-form">
-            <input
-                id="message-input"
-                type="text"
-                maxlength="2000"
-                autocomplete="off"
-                placeholder="Написать сообщение..."
-            >
-            <button type="submit" class="btn-primary">➤</button>
-        </form>
-    </section>
-</main>
-
+            <div id="active-users" class="active-users"></div>
+        </aside>
+        <section class="chat-panel">
+            <div class="chat-header">
+                <div>
+                    <h1>Общий чат</h1>
+                    <p>Все пользователи сайта общаются здесь</p>
+                </div>
+                <span id="connection-status" class="connection-status">Подключение...</span>
+            </div>
+            <div id="messages" class="chat-messages">
+                {% for message in messages %}
+                    <article class="chat-message {% if message.is_me %}own-message{% endif %}" data-message-id="{{ message.id }}">
+                        <div class="message-meta">
+                            <strong>{{ message.username }}</strong>
+                            {% if message.is_admin %}<span class="admin-badge">АДМИН</span>{% endif %}
+                            <time>{{ message.created_at }}</time>
+                            {% if is_admin %}
+                                <button type="button" class="delete-message" data-delete-id="{{ message.id }}" title="Удалить сообщение" aria-label="Удалить сообщение">×</button>
+                            {% endif %}
+                        </div>
+                        <div class="message-text">{{ message.text }}</div>
+                    </article>
+                {% empty %}
+                    <div id="empty-chat" class="empty-chat">Пока сообщений нет. Напиши первым 👋</div>
+                {% endfor %}
+            </div>
+            <form id="message-form" class="chat-form">
+                <input
+                    id="message-input"
+                    type="text"
+                    maxlength="2000"
+                    autocomplete="off"
+                    placeholder="Написать сообщение..."
+                >
+                <button type="submit" class="btn-primary">➤</button>
+            </form>
+        </section>
+    </main>
 <script>
     const messages = document.getElementById("messages");
     const form = document.getElementById("message-form");
@@ -85,7 +80,6 @@
     const status = document.getElementById("connection-status");
     const currentUsername = "{{ user.username|escapejs }}";
     const currentUserIsAdmin = {{ is_admin|yesno:"true,false" }};
-
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     let socket = null;
     let reconnectTimer = null;
@@ -108,7 +102,6 @@
 
     function addDeleteButton(meta, id) {
         if (!currentUserIsAdmin) return;
-
         const button = document.createElement("button");
         button.type = "button";
         button.className = "delete-message";
@@ -122,6 +115,11 @@
     function addMessage(data) {
         const shouldScroll = isNearBottom();
         removeEmptyState();
+
+        // Не добавляем одно и то же сообщение повторно.
+        if (messages.querySelector(`[data-message-id="${CSS.escape(String(data.id))}"]`)) {
+            return;
+        }
 
         const article = document.createElement("article");
         article.className = "chat-message" + (data.is_me ? " own-message" : "");
@@ -145,6 +143,7 @@
         const time = document.createElement("time");
         time.textContent = data.created_at;
         meta.appendChild(time);
+
         addDeleteButton(meta, data.id);
 
         const text = document.createElement("div");
@@ -157,7 +156,9 @@
     }
 
     function removeMessage(id) {
-        const article = messages.querySelector(`[data-message-id="${CSS.escape(String(id))}"]`);
+        const article = messages.querySelector(
+            `[data-message-id="${CSS.escape(String(id))}"]`
+        );
         if (article) article.remove();
 
         if (!messages.querySelector(".chat-message")) {
@@ -183,7 +184,10 @@
             const name = document.createElement("span");
             name.className = "active-user-name";
             name.textContent = user.username;
-            if (user.username === currentUsername) name.classList.add("current-user");
+
+            if (user.username === currentUsername) {
+                name.classList.add("current-user");
+            }
 
             item.append(dot, name);
 
@@ -205,6 +209,7 @@
 
     function startHeartbeat() {
         clearInterval(heartbeatTimer);
+
         heartbeatTimer = setInterval(() => {
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({type: "heartbeat"}));
@@ -213,7 +218,13 @@
     }
 
     function connectSocket() {
-        if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
+        if (
+            socket &&
+            (socket.readyState === WebSocket.OPEN ||
+             socket.readyState === WebSocket.CONNECTING)
+        ) {
+            return;
+        }
 
         updateStatus("Подключение...");
         socket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/`);
@@ -225,9 +236,20 @@
             scrollToBottom(true);
         });
 
-        socket.addEventListener("close", () => {
-            updateStatus("Нет соединения");
+        socket.addEventListener("close", event => {
             clearInterval(heartbeatTimer);
+
+            if (event.code === 4401) {
+                updateStatus("Нужна авторизация");
+                return;
+            }
+
+            if (event.code === 4403) {
+                updateStatus("Чат недоступен");
+                return;
+            }
+
+            updateStatus("Нет соединения");
             clearTimeout(reconnectTimer);
             reconnectTimer = setTimeout(connectSocket, 2000);
         });
@@ -237,19 +259,32 @@
         });
 
         socket.addEventListener("message", event => {
-            const data = JSON.parse(event.data);
+            let data;
+
+            try {
+                data = JSON.parse(event.data);
+            } catch {
+                return;
+            }
 
             if (data.type === "message") addMessage(data);
             if (data.type === "message_deleted") removeMessage(data.id);
-            if (data.type === "presence") renderUsers(data.users);
+            if (data.type === "presence") renderUsers(data.users || []);
+
+            if (data.type === "error") {
+                updateStatus(data.message || "Ошибка", false);
+            }
         });
     }
 
     form.addEventListener("submit", event => {
         event.preventDefault();
+
         const text = input.value.trim();
 
-        if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
+        if (!text || !socket || socket.readyState !== WebSocket.OPEN) {
+            return;
+        }
 
         socket.send(JSON.stringify({
             type: "message",
@@ -262,10 +297,12 @@
 
     messages.addEventListener("click", event => {
         const button = event.target.closest("[data-delete-id]");
+
         if (!button || !currentUserIsAdmin) return;
         if (!socket || socket.readyState !== WebSocket.OPEN) return;
 
         const id = Number(button.dataset.deleteId);
+
         if (!Number.isInteger(id)) return;
 
         socket.send(JSON.stringify({
