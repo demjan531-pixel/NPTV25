@@ -19,5 +19,5 @@ class UserProfile(models.Model):
 
 class Message(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    content = models.TextField()
+    content = models.TextField(default="")  # Добавлен default=""
     timestamp = models.DateTimeField(auto_now_add=True)
