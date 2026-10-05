@@ -28,7 +28,7 @@
             <nav class="nav-links">
                 <a href="{% url 'index' %}">Главная</a>
                 <a href="{% url 'chat' %}">Чат</a>
-                <a href="#">Новости</a>
+                <a href="{% url 'news' %}">Новости</a>
                 <a href="https://xn--80aneakq8a4c.xn--p1ai/" target="_blank">Бесплатные роблоксы</a>
             </nav>
         </div>
@@ -61,14 +61,12 @@
                     <article class="chat-message {% if message.is_me %}own-message{% endif %}" data-message-id="{{ message.id }}">
                         <div class="message-meta">
                             {% if message.prefix %}
-    <span class="user-prefix" style="color: {{ message.prefix_color|default:'' }};">{{ message.prefix }}</span>
-{% endif %}
-
-<strong>{{ message.username }}</strong>
-
-{% if message.is_admin %}
-    <span class="admin-badge">АДМИН</span>
-{% endif %}
+                                <span class="user-prefix" style="color: {{ message.prefix_color|default:'' }};">{{ message.prefix }}</span>
+                            {% endif %}
+                            <strong>{{ message.username }}</strong>
+                            {% if message.is_admin %}
+                                <span class="admin-badge">АДМИН</span>
+                            {% endif %}
                             <time>{{ message.created_at }}</time>
                             {% if is_admin %}
                                 <button type="button" class="delete-message" data-delete-id="{{ message.id }}" title="Удалить сообщение" aria-label="Удалить сообщение">×</button>
@@ -81,13 +79,7 @@
                 {% endfor %}
             </div>
             <form id="message-form" class="chat-form">
-                <input
-                    id="message-input"
-                    type="text"
-                    maxlength="2000"
-                    autocomplete="off"
-                    placeholder="Написать сообщение..."
-                >
+                <input id="message-input" type="text" maxlength="2000" autocomplete="off" placeholder="Написать сообщение...">
                 <button type="submit" class="btn-primary">➤</button>
             </form>
         </section>
@@ -111,9 +103,7 @@
     }
 
     function scrollToBottom(force = false) {
-        if (force || isNearBottom()) {
-            messages.scrollTop = messages.scrollHeight;
-        }
+        if (force || isNearBottom()) messages.scrollTop = messages.scrollHeight;
     }
 
     function removeEmptyState() {
@@ -137,10 +127,7 @@
         const shouldScroll = isNearBottom();
         removeEmptyState();
 
-        // Не добавляем одно и то же сообщение повторно.
-        if (messages.querySelector(`[data-message-id="${CSS.escape(String(data.id))}"]`)) {
-            return;
-        }
+        if (messages.querySelector(`[data-message-id="${CSS.escape(String(data.id))}"]`)) return;
 
         const article = document.createElement("article");
         article.className = "chat-message" + (data.is_me ? " own-message" : "");
@@ -159,7 +146,6 @@
 
         const username = document.createElement("strong");
         username.textContent = data.username;
-
         meta.appendChild(username);
 
         if (data.is_admin) {
@@ -172,7 +158,6 @@
         const time = document.createElement("time");
         time.textContent = data.created_at;
         meta.appendChild(time);
-
         addDeleteButton(meta, data.id);
 
         const text = document.createElement("div");
@@ -185,9 +170,7 @@
     }
 
     function removeMessage(id) {
-        const article = messages.querySelector(
-            `[data-message-id="${CSS.escape(String(id))}"]`
-        );
+        const article = messages.querySelector(`[data-message-id="${CSS.escape(String(id))}"]`);
         if (article) article.remove();
 
         if (!messages.querySelector(".chat-message")) {
@@ -222,9 +205,7 @@
             name.className = "active-user-name";
             name.textContent = user.username;
 
-            if (user.username === currentUsername) {
-                name.classList.add("current-user");
-            }
+            if (user.username === currentUsername) name.classList.add("current-user");
 
             item.append(dot, name);
 
@@ -246,7 +227,6 @@
 
     function startHeartbeat() {
         clearInterval(heartbeatTimer);
-
         heartbeatTimer = setInterval(() => {
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({type: "heartbeat"}));
@@ -254,14 +234,29 @@
         }, 15000);
     }
 
+    function showSystemMessage(text, error = false) {
+        const article = document.createElement("article");
+        article.className = "chat-message";
+
+        const meta = document.createElement("div");
+        meta.className = "message-meta";
+
+        const username = document.createElement("strong");
+        username.textContent = "Система";
+
+        const message = document.createElement("div");
+        message.className = "message-text";
+        message.textContent = text;
+        if (error) message.style.color = "#ff6b6b";
+
+        meta.appendChild(username);
+        article.append(meta, message);
+        messages.appendChild(article);
+        scrollToBottom(true);
+    }
+
     function connectSocket() {
-        if (
-            socket &&
-            (socket.readyState === WebSocket.OPEN ||
-             socket.readyState === WebSocket.CONNECTING)
-        ) {
-            return;
-        }
+        if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
 
         updateStatus("Подключение...");
         socket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/`);
@@ -280,7 +275,6 @@
                 updateStatus("Нужна авторизация");
                 return;
             }
-
             if (event.code === 4403) {
                 updateStatus("Чат недоступен");
                 return;
@@ -291,79 +285,53 @@
             reconnectTimer = setTimeout(connectSocket, 2000);
         });
 
-        socket.addEventListener("error", () => {
-            updateStatus("Ошибка соединения");
-        });
+        socket.addEventListener("error", () => updateStatus("Ошибка соединения"));
 
         socket.addEventListener("message", event => {
-    const data = JSON.parse(event.data);
+            const data = JSON.parse(event.data);
 
-    if (data.type === "message") {
-        addMessage(data);
-    }
+            if (data.type === "message") addMessage(data);
+            if (data.type === "message_deleted") removeMessage(data.id);
 
-    if (data.type === "message_deleted") {
-        removeMessage(data.id);
-    }
+            if (data.type === "chat_cleared") {
+                messages.innerHTML = "";
+                const empty = document.createElement("div");
+                empty.id = "empty-chat";
+                empty.className = "empty-chat";
+                empty.textContent = "Пока сообщений нет. Напиши первым 👋";
+                messages.appendChild(empty);
+            }
 
-    if (data.type === "chat_cleared") {
-        messages.innerHTML = "";
+            if (data.type === "presence") renderUsers(data.users);
+            if (data.type === "system") showSystemMessage(data.message, data.error);
 
-        const empty = document.createElement("div");
-        empty.id = "empty-chat";
-        empty.className = "empty-chat";
-        empty.textContent = "Пока сообщений нет. Напиши первым 👋";
-
-        messages.appendChild(empty);
-    }
-
-    if (data.type === "presence") {
-        renderUsers(data.users);
-    }
-
-    if (data.type === "system") {
-        showSystemMessage(data.message, data.error);
-    }
-
-    if (data.type === "force_disconnect") {
-        alert(data.reason || "Ты отключён от чата.");
-        socket.close();
-    }
-});
+            if (data.type === "force_disconnect") {
+                alert(data.reason || "Ты отключён от чата.");
+                socket.close();
+            }
+        });
     }
 
     form.addEventListener("submit", event => {
         event.preventDefault();
-
         const text = input.value.trim();
 
-        if (!text || !socket || socket.readyState !== WebSocket.OPEN) {
-            return;
-        }
+        if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
 
-        socket.send(JSON.stringify({
-            type: "message",
-            message: text
-        }));
-
+        socket.send(JSON.stringify({type: "message", message: text}));
         input.value = "";
         input.focus();
     });
 
     messages.addEventListener("click", event => {
         const button = event.target.closest("[data-delete-id]");
-
         if (!button || !currentUserIsAdmin) return;
         if (!socket || socket.readyState !== WebSocket.OPEN) return;
 
         const id = Number(button.dataset.deleteId);
-
         if (!Number.isInteger(id)) return;
 
-        socket.send(JSON.stringify({
-            type: "delete_message",
-            id: id
-        }));
+        socket.send(JSON.stringify({type: "delete_message", id:id}));
     });
 
     input.addEventListener("keydown", event => {
@@ -372,30 +340,7 @@
             form.requestSubmit();
         }
     });
-    function showSystemMessage(text, error = false) {
-    const article = document.createElement("article");
-    article.className = "chat-message";
 
-    const meta = document.createElement("div");
-    meta.className = "message-meta";
-
-    const username = document.createElement("strong");
-    username.textContent = "Система";
-
-    const message = document.createElement("div");
-    message.className = "message-text";
-    message.textContent = text;
-
-    if (error) {
-        message.style.color = "#ff6b6b";
-    }
-
-    meta.appendChild(username);
-    article.append(meta, message);
-
-    messages.appendChild(article);
-    scrollToBottom(true);
-}
     connectSocket();
     scrollToBottom(true);
 </script>
