@@ -16,9 +16,9 @@ class UserProfile(models.Model):
         default=''
     )
     prefix_color = models.CharField(
-    max_length=20,
-    blank=True,
-    default="",
+        max_length=20,
+        blank=True,
+        default="",
     )
     is_muted = models.BooleanField(default=False)
     muted_until = models.DateTimeField(null=True, blank=True)
@@ -38,3 +38,16 @@ class Message(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField(default="")
     timestamp = models.DateTimeField(default=timezone.now)
+
+
+class NewsMessage(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="news_messages",
+    )
+    content = models.TextField(max_length=2000)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["timestamp"]
